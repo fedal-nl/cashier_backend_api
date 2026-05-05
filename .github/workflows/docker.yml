@@ -1,7 +1,11 @@
-name: Build and Push Backend Image
+name: Backend CI
 
 on:
   push:
+    branches:
+      - main
+
+  pull_request:
     branches:
       - main
 
@@ -14,10 +18,10 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Login to GHCR
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
           -u ${{ github.actor }} \
@@ -30,6 +34,7 @@ jobs:
           .
 
       - name: Push image
+        if: github.ref == 'refs/heads/main'
         run: |
           docker push \
           ghcr.io/${{ github.repository_owner }}/cashier_backend_api:latest
