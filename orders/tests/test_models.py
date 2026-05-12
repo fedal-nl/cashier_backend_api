@@ -1,0 +1,260 @@
+from django.test import TestCase
+from django.utils import timezone
+
+from orders.models import (
+    OrderStatus,
+    Customer,
+    Order,
+    OrderItem,
+    OrderItemModification,
+)
+
+from menu.models import (
+    Category,
+    Quantity,
+    MenuItem,
+    Ingredient,
+)
+
+
+class OrderStatusModelTest(TestCase):
+
+    def test_create_order_status(self):
+        status = OrderStatus.objects.create(
+            name_en="Created",
+            name_ar="تم الإنشاء"
+        )
+
+        self.assertTrue(status.is_active)
+        self.assertEqual(str(status), "Created - تم الإنشاء")
+
+
+class CustomerModelTest(TestCase):
+
+    def test_create_customer(self):
+        customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com",
+            phone_number="123456",
+            address="Amsterdam"
+        )
+
+        self.assertEqual(customer.name, "Omar")
+        self.assertEqual(str(customer), "Omar - omar@test.com")
+
+    def test_unique_email(self):
+        Customer.objects.create(
+            name="User1",
+            email="test@test.com"
+        )
+
+        with self.assertRaises(Exception):
+            Customer.objects.create(
+                name="User2",
+                email="test@test.com"
+            )
+
+
+class OrderModelTest(TestCase):
+
+    def setUp(self):
+        self.customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com"
+        )
+
+        self.status = OrderStatus.objects.create(
+            name_en="Created",
+            name_ar="تم الإنشاء"
+        )
+
+    def test_create_order(self):
+        order = Order.objects.create(
+            customer=self.customer,
+            total_price=50,
+            status=self.status
+        )
+
+        self.assertIsNotNone(order.id)  # UUID generated
+        self.assertEqual(order.customer, self.customer)
+        self.assertEqual(order.status, self.status)
+
+    def test_order_str(self):
+        order = Order.objects.create(
+            customer=self.customer,
+            total_price=20,
+            status=self.status
+        )
+
+        expected = f"Order #{order.id} - Created - تم الإنشاء"
+        self.assertEqual(str(order), expected)
+
+
+class OrderItemModelTest(TestCase):
+
+    def setUp(self):
+        self.customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com"
+        )
+
+        self.status = OrderStatus.objects.create(
+            name_en="Created",
+            name_ar="تم الإنشاء"
+        )
+
+        self.order = Order.objects.create(
+            customer=self.customer,
+            total_price=0,
+            status=self.status
+        )
+
+        self.category = Category.objects.create(
+            name_en="Food",
+            name_ar="طعام"
+        )
+
+        self.quantity = Quantity.objects.create(
+            name_en="Regular",
+            name_ar="عادي"
+        )
+
+        self.menu_item = MenuItem.objects.create(
+            name_en="Burger",
+            name_ar="برجر",
+            price=10,
+            category=self.category,
+            quantity=self.quantity
+        )
+
+    def test_create_order_item(self):
+        item = OrderItem.objects.create(
+            order=self.order,
+            menu_item=self.menu_item,
+            menu_item_name_en="Burger",
+            menu_item_name_ar="برجر",
+            menu_item_base_price=10,
+            quantity=2,
+            total_price=20
+        )
+
+        self.assertEqual(item.order, self.order)
+        self.assertEqual(item.quantity, 2)
+
+    def test_order_item_str(self):
+        item = OrderItem.objects.create(
+            order=self.order,
+            menu_item=self.menu_item,
+            menu_item_name_en="Burger",
+            menu_item_name_ar="برجر",
+            menu_item_base_price=10,
+            quantity=2,
+            total_price=20
+        )
+
+        expected = "2 x Burger - برجر - $20"
+        self.assertEqual(str(item), expected)
+
+    def test_cascade_delete_order(self):
+        item = OrderItem.objects.create(
+            order=self.order,
+            menu_item=self.menu_item,
+            menu_item_name_en="Burger",
+            menu_item_name_ar="برجر",
+            menu_item_base_price=10,
+            quantity=1,
+            total_price=10
+        )
+
+        self.order.delete()
+
+        self.assertEqual(OrderItem.objects.count(), 0)
+
+
+class OrderItemModificationTest(TestCase):
+
+    def setUp(self):
+        self.customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com"
+        )
+
+        self.status = OrderStatus.objects.create(
+            name_en="Created",
+            name_ar="تم الإنشاء"
+        )
+
+        self.order = Order.objects.create(
+            customer=self.customer,
+            total_price=0,
+            status=self.status
+        )
+
+        self.category = Category.objects.create(
+            name_en="Food",
+            name_ar="طعام"
+        )
+
+        self.quantity = Quantity.objects.create(
+            name_en="Regular",
+            name_ar="عادي"
+        )
+
+        self.menu_item = MenuItem.objects.create(
+            name_en="Burger",
+            name_ar="برجر",
+            price=10,
+            category=self.category,
+            quantity=self.quantity
+        )
+
+        self.order_item = OrderItem.objects.create(
+            order=self.order,
+            menu_item=self.menu_item,
+            menu_item_name_en="Burger",
+            menu_item_name_ar="برجر",
+            menu_item_base_price=10,
+            quantity=1,
+            total_price=10
+        )
+
+        self.ingredient = Ingredient.objects.create(
+            name_en="Cheese",
+            name_ar="جبنة"
+        )
+
+    def test_create_modification(self):
+        mod = OrderItemModification.objects.create(
+            order_item=self.order_item,
+            ingredient=self.ingredient,
+            ingredient_name_en="Cheese",
+            ingredient_name_ar="جبنة",
+            modification_type="added"
+        )
+
+        self.assertEqual(mod.order_item, self.order_item)
+
+    def test_modification_str(self):
+        mod = OrderItemModification.objects.create(
+            order_item=self.order_item,
+            ingredient=self.ingredient,
+            ingredient_name_en="Cheese",
+            ingredient_name_ar="جبنة",
+            modification_type="added"
+        )
+
+        expected = "Added Cheese - جبنة"
+        self.assertEqual(str(mod), expected)
+
+    def test_cascade_delete_order_item(self):
+        OrderItemModification.objects.create(
+            order_item=self.order_item,
+            ingredient=self.ingredient,
+            ingredient_name_en="Cheese",
+            ingredient_name_ar="جبنة",
+            modification_type="added"
+        )
+
+        self.order_item.delete()
+
+        self.assertEqual(OrderItemModification.objects.count(), 0)
