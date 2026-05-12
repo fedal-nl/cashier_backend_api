@@ -10,7 +10,52 @@ on:
       - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: 5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -Ls https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run migrations
+        run: uv run python manage.py migrate
+
+      - name: Run tests
+        run: uv run python manage.py test
+
   docker:
+    needs: test   # only run if tests pass
     runs-on: ubuntu-latest
 
     permissions:
@@ -20,18 +65,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Build image
+        run: |
+          docker build \
+          -t ghcr.io/${{ github.repository_owner }}/cashier_backend_api:latest \
+          .
+
       - name: Login to GHCR
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
           -u ${{ github.actor }} \
           --password-stdin
-
-      - name: Build image
-        run: |
-          docker build \
-          -t ghcr.io/${{ github.repository_owner }}/cashier_backend_api:latest \
-          .
 
       - name: Push image
         if: github.ref == 'refs/heads/main'
