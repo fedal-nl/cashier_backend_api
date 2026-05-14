@@ -10,6 +10,7 @@ class Category(models.Model):
     # make the default ordering by id
     class Meta:
         ordering = ['id']
+        verbose_name_plural = "Categories"
 
     def __str__(self):
         return f"{self.name_en} - {self.name_ar}"
@@ -22,6 +23,7 @@ class Quantity(models.Model):
     # make the default ordering by id
     class Meta:
         ordering = ['id']
+        verbose_name_plural = "Quantities"
 
     def __str__(self):
         return f"{self.name_en} - {self.name_ar}"
