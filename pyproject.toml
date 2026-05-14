@@ -9,6 +9,7 @@ dependencies = [
     "django-stubs>=6.0.4",
     "djangorestframework>=3.17.1",
     "dotenv>=0.9.9",
+    "gunicorn>=26.0.0",
     "pillow>=12.2.0",
     "psycopg>=3.3.3",
     "ruff>=0.15.11",
