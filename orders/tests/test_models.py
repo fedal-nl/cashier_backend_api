@@ -11,7 +11,7 @@ from orders.models import (
 
 from menu.models import (
     Category,
-    Quantity,
+    Unit,
     MenuItem,
     Ingredient,
 )
@@ -21,12 +21,11 @@ class OrderStatusModelTest(TestCase):
 
     def test_create_order_status(self):
         status = OrderStatus.objects.create(
-            name_en="Created",
             name_ar="تم الإنشاء"
         )
 
         self.assertTrue(status.is_active)
-        self.assertEqual(str(status), "Created - تم الإنشاء")
+        self.assertEqual(str(status), "تم الإنشاء")
 
 
 class CustomerModelTest(TestCase):
@@ -64,7 +63,6 @@ class OrderModelTest(TestCase):
         )
 
         self.status = OrderStatus.objects.create(
-            name_en="Created",
             name_ar="تم الإنشاء"
         )
 
@@ -86,7 +84,7 @@ class OrderModelTest(TestCase):
             status=self.status
         )
 
-        expected = f"Order #{order.id} - Created - تم الإنشاء"
+        expected = f"Order #{order.id} - تم الإنشاء"
         self.assertEqual(str(order), expected)
 
 
@@ -99,7 +97,6 @@ class OrderItemModelTest(TestCase):
         )
 
         self.status = OrderStatus.objects.create(
-            name_en="Created",
             name_ar="تم الإنشاء"
         )
 
@@ -110,28 +107,25 @@ class OrderItemModelTest(TestCase):
         )
 
         self.category = Category.objects.create(
-            name_en="Food",
             name_ar="طعام"
         )
 
-        self.quantity = Quantity.objects.create(
-            name_en="Regular",
+        self.unit = Unit.objects.create(
             name_ar="عادي"
         )
 
         self.menu_item = MenuItem.objects.create(
-            name_en="Burger",
             name_ar="برجر",
             price=10,
             category=self.category,
-            quantity=self.quantity
+            quantity=1,
+            unit=self.unit
         )
 
     def test_create_order_item(self):
         item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.menu_item,
-            menu_item_name_en="Burger",
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=2,
@@ -145,21 +139,19 @@ class OrderItemModelTest(TestCase):
         item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.menu_item,
-            menu_item_name_en="Burger",
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=2,
             total_price=20
         )
 
-        expected = "2 x Burger - برجر - $20"
+        expected = "2 x برجر - $20"
         self.assertEqual(str(item), expected)
 
     def test_cascade_delete_order(self):
         item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.menu_item,
-            menu_item_name_en="Burger",
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=1,
@@ -180,7 +172,6 @@ class OrderItemModificationTest(TestCase):
         )
 
         self.status = OrderStatus.objects.create(
-            name_en="Created",
             name_ar="تم الإنشاء"
         )
 
@@ -191,27 +182,24 @@ class OrderItemModificationTest(TestCase):
         )
 
         self.category = Category.objects.create(
-            name_en="Food",
             name_ar="طعام"
         )
 
-        self.quantity = Quantity.objects.create(
-            name_en="Regular",
+        self.unit = Unit.objects.create(
             name_ar="عادي"
         )
 
         self.menu_item = MenuItem.objects.create(
-            name_en="Burger",
             name_ar="برجر",
             price=10,
             category=self.category,
-            quantity=self.quantity
+            quantity=1,
+            unit=self.unit
         )
 
         self.order_item = OrderItem.objects.create(
             order=self.order,
             menu_item=self.menu_item,
-            menu_item_name_en="Burger",
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=1,
@@ -219,15 +207,14 @@ class OrderItemModificationTest(TestCase):
         )
 
         self.ingredient = Ingredient.objects.create(
-            name_en="Cheese",
-            name_ar="جبنة"
+            name_ar="جبنة",
+            unit=self.unit
         )
 
     def test_create_modification(self):
         mod = OrderItemModification.objects.create(
             order_item=self.order_item,
             ingredient=self.ingredient,
-            ingredient_name_en="Cheese",
             ingredient_name_ar="جبنة",
             modification_type="added"
         )
@@ -238,19 +225,17 @@ class OrderItemModificationTest(TestCase):
         mod = OrderItemModification.objects.create(
             order_item=self.order_item,
             ingredient=self.ingredient,
-            ingredient_name_en="Cheese",
             ingredient_name_ar="جبنة",
             modification_type="added"
         )
 
-        expected = "Added Cheese - جبنة"
+        expected = "Added جبنة"
         self.assertEqual(str(mod), expected)
 
     def test_cascade_delete_order_item(self):
         OrderItemModification.objects.create(
             order_item=self.order_item,
             ingredient=self.ingredient,
-            ingredient_name_en="Cheese",
             ingredient_name_ar="جبنة",
             modification_type="added"
         )

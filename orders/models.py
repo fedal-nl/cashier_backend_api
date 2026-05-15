@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 import uuid
 from typing import TYPE_CHECKING
@@ -6,7 +8,6 @@ if TYPE_CHECKING:
 
 # Create your models here.
 class OrderStatus(models.Model):
-    name_en = models.CharField(max_length=100)
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
 
@@ -15,7 +16,7 @@ class OrderStatus(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f"{self.name_en} - {self.name_ar}"
+        return f"{self.name_ar}"
 
 # TODO: Move the customer model to a separate app called "customers" and link it to orders via a ForeignKey. 
 # This will allow us to manage customers independently and reuse the customer model in other parts of the system if needed.
@@ -51,7 +52,7 @@ class Order(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f"Order #{self.id} - {self.status.name_en} - {self.status.name_ar}"
+        return f"Order #{self.id} - {self.status.name_ar}"
     
 class OrderItem(models.Model):
     """The OrderItem model represents an item in a customer's order."""
@@ -63,7 +64,6 @@ class OrderItem(models.Model):
     menu_item = models.ForeignKey('menu.MenuItem', on_delete=models.CASCADE)
     # these are snapshot fields to store the menu item details at the time of order,
     # in case they change later.
-    menu_item_name_en = models.CharField(max_length=100)
     menu_item_name_ar = models.CharField(max_length=100)
     menu_item_base_price = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -75,7 +75,7 @@ class OrderItem(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f"{self.quantity} x {self.menu_item_name_en} - {self.menu_item_name_ar} - ${self.total_price}"
+        return f"{self.quantity} x {self.menu_item_name_ar} - ${self.total_price}"
     
 class OrderItemModification(models.Model):
     """The OrderItemModification model represents a modification to an order item, such as added or removed ingredients."""
@@ -90,8 +90,9 @@ class OrderItemModification(models.Model):
     )
     ingredient = models.ForeignKey('menu.Ingredient', on_delete=models.CASCADE)
     # snapshot fields to store the ingredient details at the time of modification
-    ingredient_name_en = models.CharField(max_length=100)
-    ingredient_name_ar = models.CharField(max_length=100)
+    ingredient_name_ar = models.CharField(max_length=100) 
+    ingredient_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    quantity = models.PositiveIntegerField(default=1)
 
     modification_type = models.CharField(max_length=20)  # e.g., 'added', 'removed'
 
@@ -100,4 +101,4 @@ class OrderItemModification(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f"{self.modification_type.capitalize()} {self.ingredient_name_en} - {self.ingredient_name_ar}"
+        return f"{self.modification_type.capitalize()} {self.ingredient_name_ar}"
