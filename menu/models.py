@@ -31,7 +31,7 @@ class MenuItem(models.Model):
     name_ar = models.CharField(max_length=100)
     description_ar = models.TextField(default='', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
     quantity = models.IntegerField(default=1)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(upload_to='menu_items/', null=True, blank=True)

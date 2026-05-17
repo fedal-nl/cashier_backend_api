@@ -76,7 +76,7 @@ class OrderServiceTest(TestCase):
                             "ingredient": self.ingredient,
                             "name_ar": "جبنة",
                             "type": "added",
-                            "quantity": 2
+                            "quantity": 2,
                         }
                     ]
                 }
@@ -88,3 +88,126 @@ class OrderServiceTest(TestCase):
         item = order.items.first()
         assert item is not None
         self.assertEqual(item.modifications.count(), 1)
+
+    def test_create_order_with_no_ingredient_modifications(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": [
+                        {
+                            "ingredient": self.ingredient,
+                            "name_ar": "جبنة",
+                            "type": "added",
+                            "quantity": 1,
+                        }
+                    ]
+                }
+            ]
+        )
+
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.total_price, 12)
+        item = order.items.first()
+        assert item is not None
+        self.assertEqual(item.modifications.count(), 1)
+
+    def test_create_order_with_multiple_items_and_modifications(self):
+        another_menu_item = MenuItem.objects.create(
+            name_ar="بطاطس",
+            price=5,
+            category=self.category,
+            quantity=1,
+            unit=self.unit
+        )
+
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": [
+                        {
+                            "ingredient": self.ingredient,
+                            "name_ar": "جبنة",
+                            "type": "added",
+                            "quantity": 1,
+                        }
+                    ]
+                },
+                {
+                    "menu_item": another_menu_item,
+                    "name_ar": "بطاطس",
+                    "base_price": 5,
+                    "quantity": 2,
+                    "modifications": []
+                }
+            ]
+        )
+
+        self.assertEqual(order.items.count(), 2)
+        self.assertEqual(order.total_price, 22)  # (10 + 2) for the burger with cheese + (5*2) for the fries
+
+    def test_create_order_with_removed_ingredient_modification(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": [
+                        {
+                            "ingredient": self.ingredient,
+                            "name_ar": "جبنة",
+                            "type": "removed",
+                            "quantity": 1,
+                        }
+                    ]
+                }
+            ]
+        )
+
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.total_price, 8)  # 10 for the burger - 2 for the removed cheese
+        item = order.items.first()
+        assert item is not None
+        self.assertEqual(item.modifications.count(), 1)
+
+    def test_create_order_without_ingredient_in_modification(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": [
+                        {
+                            "name_ar": "جبنة",
+                            "type": "added",
+                            "quantity": 1,
+                        }
+                    ]
+                }
+            ]
+        )
+
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.total_price, 10)  # the modification should be ignored since it doesn't have an ingredient
+        item = order.items.first()
+        assert item is not None
+        self.assertEqual(item.modifications.count(), 0)
