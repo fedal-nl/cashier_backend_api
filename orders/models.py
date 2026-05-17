@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import models
 import uuid
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from django.db.models import Manager
 
 # Create your models here.
@@ -22,7 +22,7 @@ class OrderStatus(models.Model):
 # This will allow us to manage customers independently and reuse the customer model in other parts of the system if needed.
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
 
@@ -36,7 +36,7 @@ class Customer(models.Model):
 class Order(models.Model):
     """The Order model represents a customer's order in the system."""
 
-    if TYPE_CHECKING:
+    if TYPE_CHECKING:  # pragma: no cover
         items: Manager['OrderItem']
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -57,7 +57,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     """The OrderItem model represents an item in a customer's order."""
 
-    if TYPE_CHECKING:
+    if TYPE_CHECKING:  # pragma: no cover
         modifications: Manager['OrderItemModification']
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

@@ -51,8 +51,10 @@ jobs:
       - name: Run migrations
         run: uv run python manage.py migrate
 
-      - name: Run tests
-        run: uv run python manage.py test
+      - name: Run tests with coverage
+        run: |
+          uv run python manage.py test
+          uv run coverage report
 
   docker:
     needs: test   # only run if tests pass
