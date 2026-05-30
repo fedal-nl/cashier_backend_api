@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from orders.services import create_order
-from orders.models import OrderStatus, Customer
+from orders.models import Customer, Order
 from menu.models import Category, Unit, MenuItem, Ingredient
 
 
@@ -13,9 +13,7 @@ class OrderServiceTest(TestCase):
             email="omar@test.com"
         )
 
-        self.status = OrderStatus.objects.create(
-            name_ar="تم الإنشاء"
-        )
+        self.status = Order.OrderStatus.CREATED
 
         self.category = Category.objects.create(
             name_ar="طعام"

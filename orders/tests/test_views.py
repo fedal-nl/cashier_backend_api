@@ -1,7 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from orders.models import Customer, OrderStatus
+from orders.models import Customer, Order
 from menu.models import Category, Unit, MenuItem, Ingredient
 
 
@@ -16,10 +16,7 @@ class OrderAPITest(TestCase):
             email="omar@test.com"
         )
 
-        self.status = OrderStatus.objects.create(
-            id=1,
-            name_ar="تم الإنشاء"
-        )
+        self.status = Order.OrderStatus.CREATED
 
         self.category = Category.objects.create(
             id=1,
@@ -49,7 +46,7 @@ class OrderAPITest(TestCase):
     def test_create_order_success(self):
         payload = {
             "customer_id": self.customer.pk,
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": [
                 {
                     "menu_item_id": self.menu_item.pk,
@@ -70,28 +67,10 @@ class OrderAPITest(TestCase):
 
         self.assertEqual(response.status_code, 201)
 
-    def test_order_creation_invalid_status_not_exist(self):
-        payload = {
-            "customer_id": self.customer.pk,
-            "status_id": 999,  # non-existent status
-            "items": [
-                {
-                    "menu_item_id": self.menu_item.pk,
-                    "quantity": 2,
-                    "modifications": []
-                }
-            ]
-        }
-
-        response = self.client.post("/api/orders/", payload, format="json")
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Invalid status_id", str(response.text))
-
     def test_order_creation_invalid_order_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": [
                 {
                     "menu_item_id": 999,  # non-existent menu item
@@ -109,7 +88,7 @@ class OrderAPITest(TestCase):
     def test_order_creation_customer_not_exist(self):
         payload = {
             "customer_id": 999,  # non-existent customer
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": [
                 {
                     "menu_item_id": self.menu_item.pk,
@@ -127,7 +106,7 @@ class OrderAPITest(TestCase):
     def test_order_creation_no_items(self):
         payload = {
             "customer_id": self.customer.pk,
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": []  # no items
         }
 
@@ -139,7 +118,7 @@ class OrderAPITest(TestCase):
     def test_order_create_error_menu_item_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": [
                 {
                     "menu_item_id": 999,  # non-existent menu item
@@ -157,7 +136,7 @@ class OrderAPITest(TestCase):
     def test_order_create_error_ingredient_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
-            "status_id": self.status.pk,
+            "status": self.status,
             "items": [
                 {
                     "menu_item_id": self.menu_item.pk,
