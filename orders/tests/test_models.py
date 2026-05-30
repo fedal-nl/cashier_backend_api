@@ -2,7 +2,6 @@ from django.test import TestCase
 from django.utils import timezone
 
 from orders.models import (
-    OrderStatus,
     Customer,
     Order,
     OrderItem,
@@ -15,17 +14,6 @@ from menu.models import (
     MenuItem,
     Ingredient,
 )
-
-
-class OrderStatusModelTest(TestCase):
-
-    def test_create_order_status(self):
-        status = OrderStatus.objects.create(
-            name_ar="تم الإنشاء"
-        )
-
-        self.assertTrue(status.is_active)
-        self.assertEqual(str(status), "تم الإنشاء")
 
 
 class CustomerModelTest(TestCase):
@@ -62,9 +50,7 @@ class OrderModelTest(TestCase):
             email="omar@test.com"
         )
 
-        self.status = OrderStatus.objects.create(
-            name_ar="تم الإنشاء"
-        )
+        self.status = Order.OrderStatus.CREATED
 
     def test_create_order(self):
         order = Order.objects.create(
@@ -84,7 +70,7 @@ class OrderModelTest(TestCase):
             status=self.status
         )
 
-        expected = f"Order #{order.id} - تم الإنشاء"
+        expected = f"Order #{order.id} - {self.customer.name} - {self.status}"
         self.assertEqual(str(order), expected)
 
 
@@ -96,9 +82,7 @@ class OrderItemModelTest(TestCase):
             email="omar@test.com"
         )
 
-        self.status = OrderStatus.objects.create(
-            name_ar="تم الإنشاء"
-        )
+        self.status = Order.OrderStatus.CREATED
 
         self.order = Order.objects.create(
             customer=self.customer,
@@ -171,9 +155,7 @@ class OrderItemModificationTest(TestCase):
             email="omar@test.com"
         )
 
-        self.status = OrderStatus.objects.create(
-            name_ar="تم الإنشاء"
-        )
+        self.status = Order.OrderStatus.CREATED
 
         self.order = Order.objects.create(
             customer=self.customer,

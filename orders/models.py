@@ -6,17 +6,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from django.db.models import Manager
 
-# Create your models here.
-class OrderStatus(models.Model):
-    name_ar = models.CharField(max_length=100)
-    is_active = models.BooleanField(default=True)
-
-    # make the default ordering by id
-    class Meta:
-        ordering = ['id']
-
-    def __str__(self):
-        return f"{self.name_ar}"
 
 # TODO: Move the customer model to a separate app called "customers" and link it to orders via a ForeignKey. 
 # This will allow us to manage customers independently and reuse the customer model in other parts of the system if needed.
@@ -35,6 +24,16 @@ class Customer(models.Model):
 
 class Order(models.Model):
     """The Order model represents a customer's order in the system."""
+    # Make the order status enum class instead of a separate model, since it has a fixed set of values and doesn't require additional fields.
+    class OrderStatus(models.TextChoices):
+        CREATED = 'created', 'تم الإنشاء'
+        PREPARING = 'preparing', 'قيد التحضير'
+        READY = 'ready', 'جاهز للاستلام'
+        COMPLETED = 'completed', 'مكتمل'
+        CANCELLED = 'cancelled', 'ملغي'
+        PAID = 'paid', 'مدفوع'
+        PICKED_UP = 'picked_up', 'تم الاستلام'
+        DELIVERED = 'delivered', 'تم التوصيل'
 
     if TYPE_CHECKING:  # pragma: no cover
         items: Manager['OrderItem']
@@ -43,7 +42,7 @@ class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
     note = models.TextField(blank=True, null=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.ForeignKey(OrderStatus, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.CREATED)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -52,7 +51,7 @@ class Order(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f"Order #{self.id} - {self.status.name_ar}"
+        return f"Order #{self.id} - {self.customer.name} - {self.status}"
     
 class OrderItem(models.Model):
     """The OrderItem model represents an item in a customer's order."""
@@ -69,6 +68,7 @@ class OrderItem(models.Model):
 
     quantity = models.PositiveIntegerField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    order_item_note = models.TextField(blank=True, null=True)
 
     # make the default ordering by id
     class Meta:

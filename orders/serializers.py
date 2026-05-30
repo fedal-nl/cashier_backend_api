@@ -1,13 +1,7 @@
 from rest_framework import serializers
-from .models import Order, OrderItemModification, Customer, OrderStatus, OrderItem
+from .models import Order, OrderItemModification, Customer, OrderItem
 from menu.models import Ingredient, MenuItem
 from .services import create_order
-
-
-class OrderStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderStatus
-        fields = ['id', 'name_ar']
 
 
 class OrderItemModificationInputSerializer(serializers.Serializer):
@@ -83,15 +77,8 @@ class OrderInputSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
     items = OrderItemInputSerializer(many=True)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    status_id = serializers.IntegerField()
 
     def validate(self, attrs):
-        # Validate that the status exists
-        try:
-            status = OrderStatus.objects.get(id=attrs['status_id'])
-            attrs['status'] = status
-        except OrderStatus.DoesNotExist:
-            raise serializers.ValidationError("Invalid status_id")
         
         # check that the customer exists
         try:
@@ -139,7 +126,7 @@ class OrderInputSerializer(serializers.Serializer):
         
         order = create_order(
             customer=validated_data['customer'],
-            status=validated_data['status'],
+            status=validated_data.get('status', Order.OrderStatus.CREATED),
             items_data=items_data,
             note=validated_data.get('note', "")
         )
@@ -149,7 +136,6 @@ class OrderInputSerializer(serializers.Serializer):
 class OrderOutputSerializer(serializers.ModelSerializer):
     customer = CustomerOutputSerializer()
     items = OrderItemOutputSerializer(many=True)
-    status = OrderStatusSerializer()
 
     class Meta:
         model = Order

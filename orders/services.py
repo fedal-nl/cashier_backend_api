@@ -43,7 +43,8 @@ def create_order(*, customer, status, items_data, note=None) -> Order:
             menu_item_name_ar=item["name_ar"],
             menu_item_base_price=base_price,
             quantity=quantity,
-            total_price=total_price
+            total_price=total_price,
+            order_item_note=item.get("order_item_note", "")
         )
 
         # handle modifications and add their price to the total price of the order item based on the quantity

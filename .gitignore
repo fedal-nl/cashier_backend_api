@@ -23,3 +23,7 @@ wheels/
 
 # coverage binary data
 .coverage
+
+# IDE and editor files
+.vscode/
+.idea/
