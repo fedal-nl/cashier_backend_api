@@ -39,23 +39,26 @@ class OrderItemInputSerializer(serializers.Serializer):
 
 
 class OrderItemOutputSerializer(serializers.ModelSerializer):
-    menu_item_id = serializers.IntegerField(source='menu_item.id')
-    menu_item_name_ar = serializers.CharField(source='menu_item.name_ar')
-    menu_item_base_price = serializers.DecimalField(source='menu_item.base_price', max_digits=10, decimal_places=2)
-    modifications = OrderItemModificationOutputSerializer(many=True)
+    menu_item_id = serializers.IntegerField(
+        source="menu_item.id"
+    )
+
+    modifications = OrderItemModificationOutputSerializer(
+        many=True
+    )
 
     class Meta:
         model = OrderItem
         fields = [
-            'id',
-            'menu_item_id',
-            'menu_item_name_ar',
-            'menu_item_base_price',
-            'quantity',
-            'total_price',
-            'modifications'
+            "id",
+            "menu_item_id",
+            "menu_item_name_ar",
+            "menu_item_base_price",
+            "quantity",
+            "total_price",
+            "order_item_note",
+            "modifications",
         ]
-
 
 class CustomerInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
