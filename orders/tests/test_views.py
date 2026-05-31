@@ -204,3 +204,63 @@ class CustomerAPITest(TestCase):
         self.assertEqual(data[0]['email'], "omar@example.com")
         self.assertEqual(data[1]['name'], "Ali")
         self.assertEqual(data[1]['email'], "ali@example.com")
+
+
+    def test_search_customer_found(self):
+        customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com",
+            phone_number="0771234567"
+        )
+
+        response = self.client.get(
+            "/api/orders/customers/search/?phone=0771234567"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        data = response.json()
+
+        self.assertTrue(
+            data["exists"]
+        )
+
+        self.assertEqual(
+            data["customer"]["id"],
+            customer.id
+        )
+
+
+    def test_search_customer_not_found(self):
+        response = self.client.get(
+            "/api/orders/customers/search/?phone=0000000000"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        data = response.json()
+
+        self.assertFalse(
+            data["exists"]
+        )
+
+    def test_search_customer_without_phone(self):
+        response = self.client.get(
+            "/api/orders/customers/search/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            400
+        )
+
+        self.assertEqual(
+            response.json()["error"],
+            "Phone required"
+        )

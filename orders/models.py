@@ -11,9 +11,9 @@ if TYPE_CHECKING:  # pragma: no cover
 # This will allow us to manage customers independently and reuse the customer model in other parts of the system if needed.
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True, blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    address = models.TextField(blank=True, null=True)
+    email = models.EmailField(unique=True, blank=True, null=True, verbose_name="البريد الإلكتروني")
+    phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True, verbose_name="رقم الهاتف")
+    address = models.TextField(blank=True, null=True, verbose_name="العنوان")
 
     # make the default ordering by id
     class Meta:
