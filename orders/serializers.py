@@ -140,3 +140,9 @@ class OrderOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'customer', 'status', 'note', 'created_at', 'items']
+
+
+class OrderStatusUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=Order.OrderStatus.choices
+    )
