@@ -48,6 +48,34 @@ class CustomerListView(APIView):
         serializer = CustomerOutputSerializer(customers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+@extend_schema(responses={200: OrderOutputSerializer(many=False)})
+class CustomerSearchView(APIView):
+    def get(self, request):
+        phone = request.query_params.get("phone")
+
+        if not phone:
+            return Response(
+                {"error": "Phone required"},
+                status=400
+            )
+
+        customer = Customer.objects.filter(
+            phone_number=phone
+        ).first()
+
+        if not customer:
+            return Response(
+                {"exists": False}
+            )
+
+        serializer = CustomerOutputSerializer(
+            customer
+        )
+
+        return Response({
+            "exists": True,
+            "customer": serializer.data
+        })
 
 @extend_schema(responses={200: OrderOutputSerializer(many=True)})
 class OrderListView(APIView):
