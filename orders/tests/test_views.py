@@ -1,6 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+
 from orders.models import Customer, Order
 from menu.models import Category, Unit, MenuItem, Ingredient
 
@@ -9,6 +10,7 @@ class OrderAPITest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+
 
         self.customer = Customer.objects.create(
             id=1,

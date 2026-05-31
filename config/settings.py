@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'menu',
     'orders',
-    'drf_spectacular'
+    'drf_spectacular',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -77,6 +78,9 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
 }
 
 SPECTACULAR_SETTINGS = {
