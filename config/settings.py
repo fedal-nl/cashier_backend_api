@@ -31,6 +31,8 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "backend,localhost,127.0.0.1").split(
 
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost,http://127.0.0.1").split(",")
 
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1").split(",")
+
 
 # Application definition
 
@@ -46,9 +48,11 @@ INSTALLED_APPS = [
     'orders',
     'drf_spectacular',
     'authentication',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -134,6 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
