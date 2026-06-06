@@ -46,6 +46,9 @@ class LoginView(APIView):
     request=None,
     responses={200: AuthResponseSerializer})
 class LogoutView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
     def post(self, request):
         logout(request)
         return Response({

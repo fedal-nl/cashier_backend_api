@@ -135,3 +135,32 @@ class AuthenticationViewTests(TestCase):
         self.assertFalse(
             me_response.json()["authenticated"]
         )
+
+    def test_logout_without_csrf_token(self):
+        client = APIClient(enforce_csrf_checks=True)
+        client.login(
+            username="cashier",
+            password="test1234"
+        )
+
+        response = client.post(
+            "/api/auth/logout/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            response.json()["message"],
+            "Logged out"
+        )
+
+        me_response = client.get(
+            "/api/auth/me/"
+        )
+
+        self.assertFalse(
+            me_response.json()["authenticated"]
+        )
