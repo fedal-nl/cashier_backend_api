@@ -29,6 +29,7 @@ class Unit(models.Model):
 
 class MenuItem(models.Model):
     name_ar = models.CharField(max_length=100)
+    label_ar = models.CharField(max_length=100, default='', blank=True, null=True)
     description_ar = models.TextField(default='', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderItemModification, Customer, OrderItem
+from .models import Order, OrderItemModification, Customer, OrderItem, OrderLog
 from menu.models import Ingredient, MenuItem
 from .services import create_order
 
@@ -97,6 +97,7 @@ class OrderInputSerializer(serializers.Serializer):
         return attrs
         
     def create(self, validated_data: dict) -> Order:
+        user = validated_data.pop('user', None)
         # Convert the input data into the format expected by the create_order service function
         items_data = []
         for item in validated_data['items']:
@@ -131,7 +132,8 @@ class OrderInputSerializer(serializers.Serializer):
             customer=validated_data['customer'],
             status=validated_data.get('status', Order.OrderStatus.CREATED),
             items_data=items_data,
-            note=validated_data.get('note', "")
+            note=validated_data.get('note', ""),
+            user=user
         )
         return order
 
@@ -149,3 +151,25 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=Order.OrderStatus.choices
     )
+
+
+class OrderLogOutputSerializer(serializers.ModelSerializer):
+    order_id = serializers.UUIDField(source='order.id')
+    customer = CustomerOutputSerializer()
+    created_by_username = serializers.CharField(
+        source='created_by.username',
+        allow_null=True
+    )
+
+    class Meta:
+        model = OrderLog
+        fields = [
+            'id',
+            'order_id',
+            'customer',
+            'event_type',
+            'previous_status',
+            'new_status',
+            'created_by_username',
+            'created_at',
+        ]
