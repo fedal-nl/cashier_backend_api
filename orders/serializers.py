@@ -76,6 +76,18 @@ class CustomerOutputSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'phone_number', 'address']
 
 
+class CustomerUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ['name', 'email', 'phone_number', 'address']
+        extra_kwargs = {
+            'name': {'required': False},
+            'email': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'phone_number': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'address': {'required': False, 'allow_blank': True, 'allow_null': True},
+        }
+
+
 class OrderInputSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
     items = OrderItemInputSerializer(many=True)
