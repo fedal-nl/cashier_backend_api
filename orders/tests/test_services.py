@@ -1,7 +1,8 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
 
-from orders.services import create_order
-from orders.models import Customer, Order
+from orders.services import create_order, update_order_status
+from orders.models import Customer, Order, OrderLog
 from menu.models import Category, Unit, MenuItem, Ingredient
 
 
@@ -11,6 +12,10 @@ class OrderServiceTest(TestCase):
         self.customer = Customer.objects.create(
             name="Omar",
             email="omar@test.com"
+        )
+        self.user = User.objects.create_user(
+            username="cashier",
+            password="test1234"
         )
 
         self.status = Order.OrderStatus.CREATED
@@ -57,6 +62,59 @@ class OrderServiceTest(TestCase):
         item = order.items.first()
         assert item is not None
         self.assertEqual(item.modifications.count(), 0)
+
+    def test_create_order_writes_created_log(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            user=self.user,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": []
+                }
+            ]
+        )
+
+        log = order.logs.get()
+        self.assertEqual(log.event_type, OrderLog.EventType.CREATED)
+        self.assertIsNone(log.previous_status)
+        self.assertEqual(log.new_status, Order.OrderStatus.CREATED)
+        self.assertEqual(log.created_by, self.user)
+
+    def test_update_order_status_writes_status_log(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": []
+                }
+            ]
+        )
+
+        update_order_status(
+            order=order,
+            status=Order.OrderStatus.PREPARING,
+            user=self.user
+        )
+
+        order.refresh_from_db()
+        log = order.logs.filter(
+            event_type=OrderLog.EventType.STATUS_UPDATED
+        ).get()
+
+        self.assertEqual(order.status, Order.OrderStatus.PREPARING)
+        self.assertEqual(log.previous_status, Order.OrderStatus.CREATED)
+        self.assertEqual(log.new_status, Order.OrderStatus.PREPARING)
+        self.assertEqual(log.created_by, self.user)
 
 
     def test_create_order_with_items_with_modifications(self):

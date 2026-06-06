@@ -7,10 +7,10 @@ simple and focused on data validation and transformation.
 """
 from decimal import Decimal
 
-from .models import Order, OrderItem, OrderItemModification
+from .models import Order, OrderItem, OrderItemModification, OrderLog
 
 
-def create_order(*, customer, status, items_data, note=None) -> Order:
+def create_order(*, customer, status, items_data, note=None, user=None) -> Order:
     """Creates an order with the given customer, status, items data, and an optional note.
        The items_data should be a list of dictionaries, each containing:
         - menu_item: the MenuItem instance being ordered
@@ -71,5 +71,48 @@ def create_order(*, customer, status, items_data, note=None) -> Order:
 
     order.total_price = total_order_price
     order.save()
+    create_order_log(
+        order=order,
+        event_type=OrderLog.EventType.CREATED,
+        new_status=order.status,
+        user=user
+    )
 
     return order
+
+
+def update_order_status(*, order, status, user=None) -> Order:
+    previous_status = order.status
+    order.status = status
+    order.save()
+
+    create_order_log(
+        order=order,
+        event_type=OrderLog.EventType.STATUS_UPDATED,
+        previous_status=previous_status,
+        new_status=order.status,
+        user=user
+    )
+
+    return order
+
+
+def create_order_log(
+    *,
+    order,
+    event_type,
+    new_status,
+    previous_status=None,
+    user=None
+) -> OrderLog:
+    if user is not None and not getattr(user, "is_authenticated", False):
+        user = None
+
+    return OrderLog.objects.create(
+        order=order,
+        customer=order.customer,
+        event_type=event_type,
+        previous_status=previous_status,
+        new_status=new_status,
+        created_by=user
+    )

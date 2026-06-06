@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
 import uuid
 from typing import TYPE_CHECKING
@@ -52,6 +53,53 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name} - {self.status}"
+
+
+class OrderLog(models.Model):
+    """Audit trail for order lifecycle events."""
+
+    class EventType(models.TextChoices):
+        CREATED = 'created', 'Created'
+        STATUS_UPDATED = 'status_updated', 'Status updated'
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='logs'
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='order_logs'
+    )
+    event_type = models.CharField(
+        max_length=20,
+        choices=EventType.choices
+    )
+    previous_status = models.CharField(
+        max_length=20,
+        choices=Order.OrderStatus.choices,
+        blank=True,
+        null=True
+    )
+    new_status = models.CharField(
+        max_length=20,
+        choices=Order.OrderStatus.choices
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='order_logs'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f"{self.event_type} - Order #{self.order.id} - {self.new_status}"
     
 class OrderItem(models.Model):
     """The OrderItem model represents an item in a customer's order."""

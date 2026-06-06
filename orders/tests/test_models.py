@@ -4,6 +4,7 @@ from django.utils import timezone
 from orders.models import (
     Customer,
     Order,
+    OrderLog,
     OrderItem,
     OrderItemModification,
 )
@@ -72,6 +73,45 @@ class OrderModelTest(TestCase):
 
         expected = f"Order #{order.id} - {self.customer.name} - {self.status}"
         self.assertEqual(str(order), expected)
+
+
+class OrderLogModelTest(TestCase):
+
+    def setUp(self):
+        self.customer = Customer.objects.create(
+            name="Omar",
+            email="omar-log@test.com"
+        )
+        self.order = Order.objects.create(
+            customer=self.customer,
+            total_price=20,
+            status=Order.OrderStatus.CREATED
+        )
+
+    def test_create_order_log(self):
+        log = OrderLog.objects.create(
+            order=self.order,
+            customer=self.customer,
+            event_type=OrderLog.EventType.CREATED,
+            new_status=Order.OrderStatus.CREATED
+        )
+
+        self.assertEqual(log.order, self.order)
+        self.assertEqual(log.customer, self.customer)
+        self.assertEqual(log.event_type, OrderLog.EventType.CREATED)
+        self.assertEqual(log.new_status, Order.OrderStatus.CREATED)
+
+    def test_order_log_str(self):
+        log = OrderLog.objects.create(
+            order=self.order,
+            customer=self.customer,
+            event_type=OrderLog.EventType.STATUS_UPDATED,
+            previous_status=Order.OrderStatus.CREATED,
+            new_status=Order.OrderStatus.PREPARING
+        )
+
+        expected = f"status_updated - Order #{self.order.id} - preparing"
+        self.assertEqual(str(log), expected)
 
 
 class OrderItemModelTest(TestCase):

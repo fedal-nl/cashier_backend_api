@@ -48,6 +48,11 @@ class AuthenticationViewTests(TestCase):
             401
         )
 
+        self.assertEqual(
+            response.json()["error"],
+            "Invalid credentials"
+        )
+
     def test_me_authenticated(self):
         self.client.login(
             username="cashier",
@@ -60,6 +65,47 @@ class AuthenticationViewTests(TestCase):
 
         self.assertTrue(
             response.json()["authenticated"]
+        )
+
+        self.assertEqual(
+            response.json()["username"],
+            "cashier"
+        )
+
+    def test_me_unauthenticated(self):
+        response = self.client.get(
+            "/api/auth/me/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            response.json(),
+            {"authenticated": False}
+        )
+
+    def test_csrf_returns_token(self):
+        response = self.client.get(
+            "/api/auth/csrf/"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertIn(
+            "csrfToken",
+            data
+        )
+
+        self.assertTrue(
+            data["csrfToken"]
         )
 
     def test_logout(self):
@@ -75,4 +121,17 @@ class AuthenticationViewTests(TestCase):
         self.assertEqual(
             response.status_code,
             200
+        )
+
+        self.assertEqual(
+            response.json()["message"],
+            "Logged out"
+        )
+
+        me_response = self.client.get(
+            "/api/auth/me/"
+        )
+
+        self.assertFalse(
+            me_response.json()["authenticated"]
         )
