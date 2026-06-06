@@ -264,3 +264,137 @@ class CustomerAPITest(TestCase):
             response.json()["error"],
             "Phone required"
         )
+
+    def test_update_customer_success(self):
+        customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com",
+            phone_number="0771234567",
+            address="Amsterdam"
+        )
+
+        response = self.client.patch(
+            f"/api/orders/customers/{customer.id}/",
+            {
+                "name": "Omar Updated",
+                "address": "Rotterdam"
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        customer.refresh_from_db()
+
+        self.assertEqual(
+            customer.name,
+            "Omar Updated"
+        )
+
+        self.assertEqual(
+            customer.address,
+            "Rotterdam"
+        )
+
+        self.assertEqual(
+            customer.email,
+            "omar@test.com"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            data["id"],
+            customer.id
+        )
+
+        self.assertEqual(
+            data["name"],
+            "Omar Updated"
+        )
+
+    def test_update_customer_allows_blank_optional_fields(self):
+        customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com",
+            phone_number="0771234567",
+            address="Amsterdam"
+        )
+
+        response = self.client.patch(
+            f"/api/orders/customers/{customer.id}/",
+            {
+                "email": "",
+                "phone_number": "",
+                "address": ""
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        customer.refresh_from_db()
+
+        self.assertEqual(
+            customer.email,
+            ""
+        )
+
+        self.assertEqual(
+            customer.phone_number,
+            ""
+        )
+
+        self.assertEqual(
+            customer.address,
+            ""
+        )
+
+    def test_update_customer_rejects_duplicate_email(self):
+        Customer.objects.create(
+            name="Ali",
+            email="ali@test.com"
+        )
+
+        customer = Customer.objects.create(
+            name="Omar",
+            email="omar@test.com"
+        )
+
+        response = self.client.patch(
+            f"/api/orders/customers/{customer.id}/",
+            {
+                "email": "ali@test.com"
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            400
+        )
+
+        self.assertIn(
+            "email",
+            response.json()
+        )
+
+    def test_update_customer_not_found(self):
+        response = self.client.patch(
+            "/api/orders/customers/999/",
+            {
+                "name": "Missing"
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            404
+        )

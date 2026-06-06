@@ -8,6 +8,7 @@ from .serializers import (
     OrderInputSerializer, 
     CustomerInputSerializer, 
     CustomerOutputSerializer, 
+    CustomerUpdateSerializer,
     OrderOutputSerializer,
     OrderStatusUpdateSerializer,
     OrderLogOutputSerializer
@@ -50,6 +51,33 @@ class CustomerListView(APIView):
         customers = Customer.objects.all()
         serializer = CustomerOutputSerializer(customers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(request=CustomerUpdateSerializer, responses={200: CustomerOutputSerializer})
+class CustomerUpdateView(UpdateAPIView):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerUpdateSerializer
+
+    def patch(self, request, *args, **kwargs):
+        customer = self.get_object()
+
+        serializer = self.get_serializer(
+            customer,
+            data=request.data,
+            partial=True
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        customer = serializer.save()
+
+        return Response(
+            CustomerOutputSerializer(customer).data,
+            status=status.HTTP_200_OK
+        )
+
 
 @extend_schema(responses={200: OrderOutputSerializer(many=False)})
 class CustomerSearchView(APIView):
