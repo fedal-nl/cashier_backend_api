@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 import uuid
 from typing import TYPE_CHECKING
+
+from menu.models import Branch
 if TYPE_CHECKING:  # pragma: no cover
     from django.db.models import Manager
 
@@ -59,6 +61,13 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.SET_NULL,
+        related_name='orders',
+        blank=True,
+        null=True
+    )
     delivery_company = models.ForeignKey(
         DeliveryCompany,
         on_delete=models.SET_NULL,
@@ -75,6 +84,13 @@ class Order(models.Model):
     # make the default ordering by id
     class Meta:
         ordering = ['id']
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['created_at', 'status']),
+            models.Index(fields=['customer', 'created_at']),
+            models.Index(fields=['branch', 'created_at']),
+            models.Index(fields=['branch', 'created_at', 'status']),
+        ]
 
     def __str__(self):
         return f"Order #{self.id} - {self.customer.name} - {self.status}"

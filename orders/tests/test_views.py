@@ -3,7 +3,7 @@ from rest_framework.test import APIClient
 
 
 from orders.models import Customer, Order
-from menu.models import Category, Unit, MenuItem, Ingredient
+from menu.models import Branch, Category, Unit, MenuItem, Ingredient
 
 
 class OrderAPITest(TestCase):
@@ -45,6 +45,10 @@ class OrderAPITest(TestCase):
             unit=self.unit
         )
 
+        self.branch = Branch.objects.create(
+            name="Main Branch"
+        )
+
     def test_create_order_success(self):
         payload = {
             "customer_id": self.customer.pk,
@@ -68,6 +72,59 @@ class OrderAPITest(TestCase):
         response = self.client.post("/api/orders/", payload, format="json")
 
         self.assertEqual(response.status_code, 201)
+
+    def test_create_order_with_branch_success(self):
+        payload = {
+            "customer_id": self.customer.pk,
+            "branch_id": self.branch.id,
+            "status": self.status,
+            "items": [
+                {
+                    "menu_item_id": self.menu_item.pk,
+                    "quantity": 2,
+                    "modifications": []
+                }
+            ]
+        }
+
+        response = self.client.post("/api/orders/", payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+
+        order = Order.objects.get(
+            id=response.json()["order_id"]
+        )
+
+        self.assertEqual(
+            order.branch,
+            self.branch
+        )
+
+    def test_create_order_rejects_menu_item_not_available_for_branch(self):
+        other_branch = Branch.objects.create(
+            name="Second Branch"
+        )
+        self.menu_item.branches.set(
+            [self.branch]
+        )
+
+        payload = {
+            "customer_id": self.customer.pk,
+            "branch_id": other_branch.id,
+            "status": self.status,
+            "items": [
+                {
+                    "menu_item_id": self.menu_item.pk,
+                    "quantity": 2,
+                    "modifications": []
+                }
+            ]
+        }
+
+        response = self.client.post("/api/orders/", payload, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("not available", str(response.text))
 
     def test_order_creation_invalid_order_not_exist(self):
         payload = {

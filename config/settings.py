@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'menu',
     'orders',
+    'reports',
     'drf_spectacular',
     'authentication',
     'corsheaders',

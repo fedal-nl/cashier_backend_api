@@ -3,6 +3,7 @@ from django.db import IntegrityError
 
 from menu.models import (
     Category,
+    Branch,
     Unit,
     MenuItem,
     Ingredient,
@@ -40,6 +41,75 @@ class UnitModelTest(TestCase):
             name_ar="كبير"
         )
         self.assertEqual(str(unit), "كبير")
+
+
+class BranchModelTest(TestCase):
+
+    def test_create_branch(self):
+        branch = Branch.objects.create(
+            name="Main Branch",
+            location="Amsterdam"
+        )
+
+        self.assertEqual(
+            branch.name,
+            "Main Branch"
+        )
+
+        self.assertEqual(
+            str(branch),
+            "Main Branch"
+        )
+
+    def test_new_menu_item_is_available_for_existing_branches(self):
+        branch = Branch.objects.create(
+            name="Main Branch"
+        )
+
+        category = Category.objects.create(
+            name_ar="طعام"
+        )
+
+        unit = Unit.objects.create(
+            name_ar="عادي"
+        )
+
+        item = MenuItem.objects.create(
+            name_ar="برجر",
+            price=12.50,
+            category=category,
+            unit=unit
+        )
+
+        self.assertIn(
+            branch,
+            item.branches.all()
+        )
+
+    def test_new_branch_gets_existing_menu_items(self):
+        category = Category.objects.create(
+            name_ar="طعام"
+        )
+
+        unit = Unit.objects.create(
+            name_ar="عادي"
+        )
+
+        item = MenuItem.objects.create(
+            name_ar="برجر",
+            price=12.50,
+            category=category,
+            unit=unit
+        )
+
+        branch = Branch.objects.create(
+            name="Main Branch"
+        )
+
+        self.assertIn(
+            item,
+            branch.menu_items.all()
+        )
 
 
 class IngredientModelTest(TestCase):

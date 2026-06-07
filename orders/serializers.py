@@ -8,6 +8,8 @@ from .models import (
     OrderLog,
 )
 from menu.models import Ingredient, MenuItem
+from menu.models import Branch
+from menu.serializers import BranchSerializer
 from .services import create_order
 
 
@@ -109,6 +111,7 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
 
 class OrderInputSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
+    branch_id = serializers.IntegerField(required=False)
     items = OrderItemInputSerializer(many=True)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
@@ -120,10 +123,31 @@ class OrderInputSerializer(serializers.Serializer):
             attrs['customer'] = customer
         except Customer.DoesNotExist:
             raise serializers.ValidationError("Invalid customer_id")
+
+        branch = None
+        if attrs.get('branch_id'):
+            try:
+                branch = Branch.objects.get(
+                    id=attrs['branch_id'],
+                    is_active=True
+                )
+                attrs['branch'] = branch
+            except Branch.DoesNotExist:
+                raise serializers.ValidationError("Invalid branch_id")
         
         # check that there is at least one item in the order
         if not attrs['items']:
             raise serializers.ValidationError("Order must have at least one item")
+
+        if branch is not None:
+            for item in attrs['items']:
+                if not MenuItem.objects.filter(
+                    id=item['menu_item_id'],
+                    branches=branch
+                ).exists():
+                    raise serializers.ValidationError(
+                        f"menu_item_id {item['menu_item_id']} is not available for this branch"
+                    )
         
         return attrs
         
@@ -161,6 +185,7 @@ class OrderInputSerializer(serializers.Serializer):
         
         order = create_order(
             customer=validated_data['customer'],
+            branch=validated_data.get('branch'),
             status=validated_data.get('status', Order.OrderStatus.CREATED),
             items_data=items_data,
             note=validated_data.get('note', ""),
@@ -171,6 +196,7 @@ class OrderInputSerializer(serializers.Serializer):
 
 class OrderOutputSerializer(serializers.ModelSerializer):
     customer = CustomerOutputSerializer()
+    branch = BranchSerializer(allow_null=True)
     delivery_company = DeliveryCompanyOutputSerializer(allow_null=True)
     items = OrderItemOutputSerializer(many=True)
 
@@ -179,6 +205,7 @@ class OrderOutputSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'customer',
+            'branch',
             'delivery_company',
             'status',
             'note',

@@ -129,6 +129,7 @@ class OrderListView(APIView):
     def get(self, request):
         queryset = Order.objects.select_related(
             "customer",
+            "branch",
             "delivery_company"
         ).prefetch_related(
             "items__modifications"
@@ -173,6 +174,7 @@ class OrderListView(APIView):
 class OrderDetailView(RetrieveAPIView):
     queryset = Order.objects.select_related(
         "customer",
+        "branch",
         "delivery_company"
     ).prefetch_related(
         "items__modifications"
