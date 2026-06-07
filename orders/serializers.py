@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import Order, OrderItemModification, Customer, OrderItem, OrderLog
+from .models import (
+    Customer,
+    DeliveryCompany,
+    Order,
+    OrderItem,
+    OrderItemModification,
+    OrderLog,
+)
 from menu.models import Ingredient, MenuItem
 from .services import create_order
 
@@ -74,6 +81,18 @@ class CustomerOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ['id', 'name', 'email', 'phone_number', 'address']
+
+
+class DeliveryCompanyOutputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryCompany
+        fields = [
+            'id',
+            'name',
+            'phone_number',
+            'website',
+            'contact_person',
+        ]
 
 
 class CustomerUpdateSerializer(serializers.ModelSerializer):
@@ -152,17 +171,51 @@ class OrderInputSerializer(serializers.Serializer):
 
 class OrderOutputSerializer(serializers.ModelSerializer):
     customer = CustomerOutputSerializer()
+    delivery_company = DeliveryCompanyOutputSerializer(allow_null=True)
     items = OrderItemOutputSerializer(many=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'status', 'note', 'created_at', 'items', 'total_price', 'updated_at']
+        fields = [
+            'id',
+            'customer',
+            'delivery_company',
+            'status',
+            'note',
+            'created_at',
+            'items',
+            'total_price',
+            'updated_at'
+        ]
 
 
 class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=Order.OrderStatus.choices
     )
+    delivery_company_id = serializers.IntegerField(
+        required=False
+    )
+
+    def validate_delivery_company_id(self, value):
+        try:
+            return DeliveryCompany.objects.get(id=value)
+        except DeliveryCompany.DoesNotExist:
+            raise serializers.ValidationError("Invalid delivery_company_id")
+
+    def validate(self, attrs):
+        order = self.context.get('order')
+
+        if (
+            attrs['status'] == Order.OrderStatus.PICKED_UP
+            and 'delivery_company_id' not in attrs
+            and not getattr(order, 'delivery_company_id', None)
+        ):
+            raise serializers.ValidationError({
+                'delivery_company_id': 'This field is required when status is picked_up.'
+            })
+
+        return attrs
 
 
 class OrderLogOutputSerializer(serializers.ModelSerializer):

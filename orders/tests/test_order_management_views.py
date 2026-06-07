@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from orders.models import Customer, Order, OrderLog
+from orders.models import Customer, DeliveryCompany, Order, OrderLog
 
 
 class OrderManagementViewTests(TestCase):
@@ -117,6 +117,118 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(
             log.created_by,
             self.user
+        )
+
+    def test_update_order_status_to_picked_up_sets_delivery_company(self):
+        delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery",
+            phone_number="0771234567",
+            website="https://delivery.example.com",
+            contact_person="Sara"
+        )
+
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.PICKED_UP,
+                "delivery_company_id": delivery_company.id
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.order.refresh_from_db()
+
+        self.assertEqual(
+            self.order.status,
+            Order.OrderStatus.PICKED_UP
+        )
+
+        self.assertEqual(
+            self.order.delivery_company,
+            delivery_company
+        )
+
+        self.assertEqual(
+            response.json()["delivery_company"]["id"],
+            delivery_company.id
+        )
+
+    def test_update_order_status_to_picked_up_requires_delivery_company(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.PICKED_UP
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            400
+        )
+
+        self.assertIn(
+            "delivery_company_id",
+            response.json()
+        )
+
+    def test_update_order_status_rejects_invalid_delivery_company(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.PICKED_UP,
+                "delivery_company_id": 999
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            400
+        )
+
+        self.assertIn(
+            "delivery_company_id",
+            response.json()
+        )
+
+    def test_list_delivery_companies(self):
+        delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery",
+            phone_number="0771234567",
+            website="https://delivery.example.com",
+            contact_person="Sara"
+        )
+
+        response = self.client.get(
+            "/api/orders/delivery-companies/"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            len(data),
+            1
+        )
+
+        self.assertEqual(
+            data[0]["id"],
+            delivery_company.id
+        )
+
+        self.assertEqual(
+            data[0]["name"],
+            "Fast Delivery"
         )
 
     def test_filter_orders_by_customer_name(self):

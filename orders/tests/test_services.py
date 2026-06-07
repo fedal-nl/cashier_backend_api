@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from orders.services import create_order, update_order_status
-from orders.models import Customer, Order, OrderLog
+from orders.models import Customer, DeliveryCompany, Order, OrderLog
 from menu.models import Category, Unit, MenuItem, Ingredient
 
 
@@ -115,6 +115,44 @@ class OrderServiceTest(TestCase):
         self.assertEqual(log.previous_status, Order.OrderStatus.CREATED)
         self.assertEqual(log.new_status, Order.OrderStatus.PREPARING)
         self.assertEqual(log.created_by, self.user)
+
+    def test_update_order_status_sets_delivery_company(self):
+        delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery"
+        )
+
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": []
+                }
+            ]
+        )
+
+        update_order_status(
+            order=order,
+            status=Order.OrderStatus.PICKED_UP,
+            delivery_company=delivery_company,
+            user=self.user
+        )
+
+        order.refresh_from_db()
+
+        self.assertEqual(
+            order.delivery_company,
+            delivery_company
+        )
+
+        self.assertEqual(
+            order.status,
+            Order.OrderStatus.PICKED_UP
+        )
 
 
     def test_create_order_with_items_with_modifications(self):

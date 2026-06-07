@@ -9,11 +9,12 @@ from .serializers import (
     CustomerInputSerializer, 
     CustomerOutputSerializer, 
     CustomerUpdateSerializer,
+    DeliveryCompanyOutputSerializer,
     OrderOutputSerializer,
     OrderStatusUpdateSerializer,
     OrderLogOutputSerializer
 )
-from .models import Customer, Order, OrderLog
+from .models import Customer, DeliveryCompany, Order, OrderLog
 from .services import update_order_status
 from rest_framework.generics import (
     RetrieveAPIView,
@@ -79,6 +80,19 @@ class CustomerUpdateView(UpdateAPIView):
         )
 
 
+@extend_schema(responses={200: DeliveryCompanyOutputSerializer(many=True)})
+class DeliveryCompanyListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        delivery_companies = DeliveryCompany.objects.all()
+        serializer = DeliveryCompanyOutputSerializer(
+            delivery_companies,
+            many=True
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @extend_schema(responses={200: OrderOutputSerializer(many=False)})
 class CustomerSearchView(APIView):
     def get(self, request):
@@ -114,7 +128,8 @@ class OrderListView(APIView):
 
     def get(self, request):
         queryset = Order.objects.select_related(
-            "customer"
+            "customer",
+            "delivery_company"
         ).prefetch_related(
             "items__modifications"
         )
@@ -156,7 +171,12 @@ class OrderListView(APIView):
   
 @extend_schema(responses={200: OrderOutputSerializer})    
 class OrderDetailView(RetrieveAPIView):
-    queryset = Order.objects.all()
+    queryset = Order.objects.select_related(
+        "customer",
+        "delivery_company"
+    ).prefetch_related(
+        "items__modifications"
+    )
     serializer_class = OrderOutputSerializer
     permission_classes = [IsAuthenticated]
 
@@ -171,7 +191,10 @@ class OrderStatusUpdateView(UpdateAPIView):
         order = self.get_object()
 
         serializer = self.get_serializer(
-            data=request.data
+            data=request.data,
+            context={
+                "order": order
+            }
         )
 
         serializer.is_valid(
@@ -181,12 +204,16 @@ class OrderStatusUpdateView(UpdateAPIView):
         order = update_order_status(
             order=order,
             status=serializer.validated_data["status"],
+            delivery_company=serializer.validated_data.get("delivery_company_id"),
             user=request.user
         )
 
         return Response({
             "message": "Status updated",
-            "status": order.status
+            "status": order.status,
+            "delivery_company": DeliveryCompanyOutputSerializer(
+                order.delivery_company
+            ).data if order.delivery_company else None
         })
 
 

@@ -23,6 +23,24 @@ class Customer(models.Model):
     def __str__(self):
         return f"{self.name} - {self.email}"
 
+
+class DeliveryCompany(models.Model):
+    if TYPE_CHECKING:  # pragma: no cover
+        id: int
+
+    name = models.CharField(max_length=100, blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    contact_person = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        ordering = ['id']
+        verbose_name_plural = 'Delivery companies'
+
+    def __str__(self):
+        return self.name or f"Delivery company #{self.id}"
+
+
 class Order(models.Model):
     """The Order model represents a customer's order in the system."""
     # Make the order status enum class instead of a separate model, since it has a fixed set of values and doesn't require additional fields.
@@ -41,6 +59,13 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
+    delivery_company = models.ForeignKey(
+        DeliveryCompany,
+        on_delete=models.SET_NULL,
+        related_name='orders',
+        blank=True,
+        null=True
+    )
     note = models.TextField(blank=True, null=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.CREATED)

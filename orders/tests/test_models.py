@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from orders.models import (
     Customer,
+    DeliveryCompany,
     Order,
     OrderLog,
     OrderItem,
@@ -41,6 +42,35 @@ class CustomerModelTest(TestCase):
                 name="User2",
                 email="test@test.com"
             )
+
+
+class DeliveryCompanyModelTest(TestCase):
+
+    def test_create_delivery_company(self):
+        delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery",
+            phone_number="0771234567",
+            website="https://delivery.example.com",
+            contact_person="Sara"
+        )
+
+        self.assertEqual(
+            delivery_company.name,
+            "Fast Delivery"
+        )
+
+        self.assertEqual(
+            str(delivery_company),
+            "Fast Delivery"
+        )
+
+    def test_delivery_company_name_is_optional(self):
+        delivery_company = DeliveryCompany.objects.create()
+
+        self.assertEqual(
+            str(delivery_company),
+            f"Delivery company #{delivery_company.id}"
+        )
 
 
 class OrderModelTest(TestCase):
