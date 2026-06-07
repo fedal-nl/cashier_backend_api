@@ -81,9 +81,13 @@ def create_order(*, customer, status, items_data, note=None, user=None) -> Order
     return order
 
 
-def update_order_status(*, order, status, user=None) -> Order:
+def update_order_status(*, order, status, delivery_company=None, user=None) -> Order:
     previous_status = order.status
     order.status = status
+
+    if delivery_company is not None:
+        order.delivery_company = delivery_company
+
     order.save()
 
     create_order_log(
