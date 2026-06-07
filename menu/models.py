@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from decimal import Decimal
 
 # Create your models here.
@@ -27,6 +29,20 @@ class Unit(models.Model):
     def __str__(self):
         return f"{self.name_ar}"
 
+
+class Branch(models.Model):
+    name = models.CharField(max_length=100, db_index=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['id']
+        verbose_name_plural = "Branches"
+
+    def __str__(self):
+        return self.name
+
+
 class MenuItem(models.Model):
     name_ar = models.CharField(max_length=100)
     label_ar = models.CharField(max_length=100, default='', blank=True, null=True)
@@ -37,6 +53,7 @@ class MenuItem(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(upload_to='menu_items/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    branches = models.ManyToManyField(Branch, related_name='menu_items', blank=True)
 
     # make the default ordering by id
     class Meta:
@@ -85,3 +102,15 @@ class MenuItemIngredient(models.Model):
 
     def __str__(self):
         return f"{self.menu_item.name_ar} | {self.ingredient.name_ar}"
+
+
+@receiver(post_save, sender=Branch)
+def assign_new_branch_to_existing_menu_items(sender, instance, created, **kwargs):
+    if created:
+        instance.menu_items.add(*MenuItem.objects.all())
+
+
+@receiver(post_save, sender=MenuItem)
+def assign_new_menu_item_to_existing_branches(sender, instance, created, **kwargs):
+    if created:
+        instance.branches.add(*Branch.objects.all())

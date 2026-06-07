@@ -10,7 +10,7 @@ from decimal import Decimal
 from .models import Order, OrderItem, OrderItemModification, OrderLog
 
 
-def create_order(*, customer, status, items_data, note=None, user=None) -> Order:
+def create_order(*, customer, status, items_data, note=None, branch=None, user=None) -> Order:
     """Creates an order with the given customer, status, items data, and an optional note.
        The items_data should be a list of dictionaries, each containing:
         - menu_item: the MenuItem instance being ordered
@@ -24,6 +24,7 @@ def create_order(*, customer, status, items_data, note=None, user=None) -> Order
     """
     order = Order.objects.create(
         customer=customer,
+        branch=branch,
         status=status,
         note=note or "",
         total_price=0

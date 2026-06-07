@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Category, Unit, MenuItem, Ingredient, MenuItemIngredient
+from .models import Branch, Category, Unit, MenuItem, Ingredient, MenuItemIngredient
+
+
+class BranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Branch
+        fields = ['id', 'name', 'location', 'is_active']
 
 
 class MenuItemIngredientSerializer(serializers.ModelSerializer):
@@ -29,6 +35,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
     unit_id = serializers.IntegerField(source='unit.id', allow_null=True)
     unit_name_ar = serializers.CharField(source='unit.name_ar', allow_null=True)
     ingredients = MenuItemIngredientSerializer(many=True)
+    branches = BranchSerializer(many=True)
 
     class Meta:
         model = MenuItem
@@ -45,6 +52,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'unit_name_ar',
             'image',
             'is_active',
+            'branches',
             'ingredients'
         ]
 
@@ -65,8 +73,29 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    items = MenuItemSerializer(many=True, read_only=True)
+    items = serializers.SerializerMethodField()
     
     class Meta:
         model = Category
         fields = ['id', 'name_ar', 'items']
+
+    def get_items(self, obj):
+        items = obj.items.filter(
+            is_active=True
+        ).prefetch_related(
+            'branches',
+            'ingredients__ingredient',
+            'ingredients__ingredient__unit'
+        )
+
+        branch_id = self.context.get('branch_id')
+
+        if branch_id:
+            items = items.filter(
+                branches__id=branch_id
+            )
+
+        return MenuItemSerializer(
+            items.distinct(),
+            many=True
+        ).data
