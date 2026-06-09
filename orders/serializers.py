@@ -44,6 +44,7 @@ class OrderItemModificationOutputSerializer(serializers.ModelSerializer):
 class OrderItemInputSerializer(serializers.Serializer):
     menu_item_id = serializers.IntegerField()
     quantity = serializers.IntegerField()
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True)
     modifications = OrderItemModificationInputSerializer(many=True, required=False)
 
 
@@ -180,6 +181,7 @@ class OrderInputSerializer(serializers.Serializer):
                 "name_ar": menu_item.name_ar,
                 "base_price": menu_item.price,
                 "quantity": item['quantity'],
+                "order_item_note": item.get('note', ""),
                 "modifications": modifications_data
             })
         
