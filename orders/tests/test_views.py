@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 
-from orders.models import Customer, Order
+from orders.models import Customer, DeliveryCompany, Order
 from menu.models import Branch, Category, Unit, MenuItem, Ingredient
 
 
@@ -49,9 +49,14 @@ class OrderAPITest(TestCase):
             name="Main Branch"
         )
 
+        self.delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery"
+        )
+
     def test_create_order_success(self):
         payload = {
             "customer_id": self.customer.pk,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -77,6 +82,7 @@ class OrderAPITest(TestCase):
         payload = {
             "customer_id": self.customer.pk,
             "branch_id": self.branch.id,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -100,6 +106,34 @@ class OrderAPITest(TestCase):
             self.branch
         )
 
+    def test_create_order_with_delivery_company_success(self):
+        payload = {
+            "customer_id": self.customer.pk,
+            "branch_id": self.branch.id,
+            "delivery_company_id": self.delivery_company.pk,
+            "status": self.status,
+            "items": [
+                {
+                    "menu_item_id": self.menu_item.pk,
+                    "quantity": 2,
+                    "modifications": []
+                }
+            ]
+        }
+
+        response = self.client.post("/api/orders/", payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+
+        order = Order.objects.get(
+            id=response.json()["order_id"]
+        )
+
+        self.assertEqual(
+            order.delivery_company,
+            self.delivery_company
+        )
+
     def test_create_order_rejects_menu_item_not_available_for_branch(self):
         other_branch = Branch.objects.create(
             name="Second Branch"
@@ -111,6 +145,7 @@ class OrderAPITest(TestCase):
         payload = {
             "customer_id": self.customer.pk,
             "branch_id": other_branch.id,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -129,6 +164,7 @@ class OrderAPITest(TestCase):
     def test_order_creation_invalid_order_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -147,6 +183,7 @@ class OrderAPITest(TestCase):
     def test_order_creation_customer_not_exist(self):
         payload = {
             "customer_id": 999,  # non-existent customer
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -165,6 +202,7 @@ class OrderAPITest(TestCase):
     def test_order_creation_no_items(self):
         payload = {
             "customer_id": self.customer.pk,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": []  # no items
         }
@@ -177,6 +215,7 @@ class OrderAPITest(TestCase):
     def test_order_create_error_menu_item_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
@@ -195,6 +234,7 @@ class OrderAPITest(TestCase):
     def test_order_create_error_ingredient_not_exist(self):
         payload = {
             "customer_id": self.customer.pk,
+            "delivery_company_id": self.delivery_company.pk,
             "status": self.status,
             "items": [
                 {
