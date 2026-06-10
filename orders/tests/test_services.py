@@ -42,6 +42,10 @@ class OrderServiceTest(TestCase):
             unit=self.unit
         )
 
+        self.delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery"
+        )
+
     def test_create_order_with_items_without_modifications(self):
         order = create_order(
             customer=self.customer,
@@ -84,6 +88,27 @@ class OrderServiceTest(TestCase):
         self.assertIsNone(log.previous_status)
         self.assertEqual(log.new_status, Order.OrderStatus.CREATED)
         self.assertEqual(log.created_by, self.user)
+
+    def test_create_order_sets_delivery_company(self):
+        order = create_order(
+            customer=self.customer,
+            status=self.status,
+            delivery_company=self.delivery_company,
+            items_data=[
+                {
+                    "menu_item": self.menu_item,
+                    "name_ar": "برجر",
+                    "base_price": 10,
+                    "quantity": 1,
+                    "modifications": []
+                }
+            ]
+        )
+
+        self.assertEqual(
+            order.delivery_company,
+            self.delivery_company
+        )
 
     def test_update_order_status_writes_status_log(self):
         order = create_order(

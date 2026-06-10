@@ -158,7 +158,38 @@ class OrderManagementViewTests(TestCase):
             delivery_company.id
         )
 
-    def test_update_order_status_to_picked_up_requires_delivery_company(self):
+    def test_update_order_status_to_preparing_sets_delivery_company(self):
+        delivery_company = DeliveryCompany.objects.create(
+            name="Fast Delivery"
+        )
+
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.PREPARING,
+                "delivery_company_id": delivery_company.id
+            },
+            format="json"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.order.refresh_from_db()
+
+        self.assertEqual(
+            self.order.status,
+            Order.OrderStatus.PREPARING
+        )
+
+        self.assertEqual(
+            self.order.delivery_company,
+            delivery_company
+        )
+
+    def test_update_order_status_to_picked_up_without_delivery_company(self):
         response = self.client.patch(
             f"/api/orders/{self.order.id}/status/",
             {
@@ -169,12 +200,18 @@ class OrderManagementViewTests(TestCase):
 
         self.assertEqual(
             response.status_code,
-            400
+            200
         )
 
-        self.assertIn(
-            "delivery_company_id",
-            response.json()
+        self.order.refresh_from_db()
+
+        self.assertEqual(
+            self.order.status,
+            Order.OrderStatus.PICKED_UP
+        )
+
+        self.assertIsNone(
+            self.order.delivery_company
         )
 
     def test_update_order_status_rejects_invalid_delivery_company(self):

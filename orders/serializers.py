@@ -113,6 +113,7 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
 class OrderInputSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
     branch_id = serializers.IntegerField(required=False)
+    delivery_company_id = serializers.IntegerField()
     items = OrderItemInputSerializer(many=True)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
@@ -124,6 +125,14 @@ class OrderInputSerializer(serializers.Serializer):
             attrs['customer'] = customer
         except Customer.DoesNotExist:
             raise serializers.ValidationError("Invalid customer_id")
+
+        try:
+            delivery_company = DeliveryCompany.objects.get(
+                id=attrs['delivery_company_id']
+            )
+            attrs['delivery_company'] = delivery_company
+        except DeliveryCompany.DoesNotExist:
+            raise serializers.ValidationError("Invalid delivery_company_id")
 
         branch = None
         if attrs.get('branch_id'):
@@ -188,6 +197,7 @@ class OrderInputSerializer(serializers.Serializer):
         order = create_order(
             customer=validated_data['customer'],
             branch=validated_data.get('branch'),
+            delivery_company=validated_data['delivery_company'],
             status=validated_data.get('status', Order.OrderStatus.CREATED),
             items_data=items_data,
             note=validated_data.get('note', ""),
@@ -233,17 +243,6 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid delivery_company_id")
 
     def validate(self, attrs):
-        order = self.context.get('order')
-
-        if (
-            attrs['status'] == Order.OrderStatus.PICKED_UP
-            and 'delivery_company_id' not in attrs
-            and not getattr(order, 'delivery_company_id', None)
-        ):
-            raise serializers.ValidationError({
-                'delivery_company_id': 'This field is required when status is picked_up.'
-            })
-
         return attrs
 
 
