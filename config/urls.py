@@ -18,9 +18,12 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from django.conf import settings
+from .views import health, health_live
 
 urlpatterns = [
     path('fedal-admin-8k14w/', admin.site.urls),
+    path("health/live/", health_live, name="health-live"),
+    path("health/", health, name="health"),
     path("api/orders/", include("orders.urls")),
     path("api/reports/", include("reports.urls")),
     path("api/menu/", include("menu.urls")),
