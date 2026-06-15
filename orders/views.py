@@ -1,4 +1,5 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from django.utils.dateparse import parse_date
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,9 +13,12 @@ from .serializers import (
     DeliveryCompanyOutputSerializer,
     OrderOutputSerializer,
     OrderStatusUpdateSerializer,
-    OrderLogOutputSerializer
+    OrderLogOutputSerializer,
+    PaginatedCustomerOutputSerializer,
+    PaginatedOrderOutputSerializer
 )
 from .models import Customer, DeliveryCompany, Order, OrderLog
+from .pagination import StandardResultsSetPagination
 from .services import update_order_status
 from rest_framework.generics import (
     RetrieveAPIView,
@@ -46,12 +50,37 @@ class CustomerCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(responses={200: CustomerOutputSerializer(many=True)})
+PAGINATION_PARAMETERS = [
+    OpenApiParameter(
+        name="page",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        description="Page number to return. Use this instead of fetching every row.",
+    ),
+    OpenApiParameter(
+        name="page_size",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        default=2,
+        description="Number of rows per page. Defaults to 2 and is capped at 100.",
+    ),
+]
+
+
+@extend_schema(
+    parameters=PAGINATION_PARAMETERS,
+    responses={200: PaginatedCustomerOutputSerializer},
+)
 class CustomerListView(APIView):
     def get(self, request):
         customers = Customer.objects.all()
-        serializer = CustomerOutputSerializer(customers, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(customers, request, view=self)
+
+        # Return DRF's paginated shape so the UI gets count/next/previous
+        # metadata without loading the full customer table at once.
+        serializer = CustomerOutputSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 @extend_schema(request=CustomerUpdateSerializer, responses={200: CustomerOutputSerializer})
@@ -122,7 +151,30 @@ class CustomerSearchView(APIView):
             "customer": serializer.data
         })
 
-@extend_schema(responses={200: OrderOutputSerializer(many=True)})
+@extend_schema(
+    parameters=[
+        *PAGINATION_PARAMETERS,
+        OpenApiParameter(
+            name="status",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter orders by status, for example created or completed.",
+        ),
+        OpenApiParameter(
+            name="customer",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter orders by customer name.",
+        ),
+        OpenApiParameter(
+            name="search",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Search orders by id or customer name.",
+        ),
+    ],
+    responses={200: PaginatedOrderOutputSerializer},
+)
 class OrderListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -159,15 +211,25 @@ class OrderListView(APIView):
 
         if search:
             queryset = queryset.filter(
-                Q(id__icontains=search)
+                Q(id__icontains=search) |
+                Q(customer__name__icontains=search)
             )
 
+        queryset = queryset.order_by(
+            "-created_at"
+        )
+
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+
+        # Serialize only the requested page to keep large order histories from
+        # loading all nested order items and modifications in one response.
         serializer = OrderOutputSerializer(
-            queryset,
+            page,
             many=True
         )
 
-        return Response(serializer.data)  
+        return paginator.get_paginated_response(serializer.data)  
   
   
 @extend_schema(responses={200: OrderOutputSerializer})    

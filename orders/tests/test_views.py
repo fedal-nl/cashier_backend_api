@@ -295,12 +295,32 @@ class CustomerAPITest(TestCase):
 
         # Assert the response
         self.assertEqual(response.status_code, 200)
-        # self.assertEqual(data, "")
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data[0]['name'], "Omar")
-        self.assertEqual(data[0]['email'], "omar@example.com")
-        self.assertEqual(data[1]['name'], "Ali")
-        self.assertEqual(data[1]['email'], "ali@example.com")
+        self.assertEqual(data["count"], 2)
+        self.assertIsNone(data["next"])
+        self.assertIsNone(data["previous"])
+        self.assertEqual(len(data["results"]), 2)
+        self.assertEqual(data["results"][0]['name'], "Omar")
+        self.assertEqual(data["results"][0]['email'], "omar@example.com")
+        self.assertEqual(data["results"][1]['name'], "Ali")
+        self.assertEqual(data["results"][1]['email'], "ali@example.com")
+
+    def test_fetch_customers_can_be_paginated(self):
+        for index in range(3):
+            Customer.objects.create(
+                name=f"Customer {index}",
+                email=f"customer-{index}@example.com"
+            )
+
+        response = self.client.get(
+            "/api/orders/customers/list/?page_size=2"
+        )
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["count"], 3)
+        self.assertIsNotNone(data["next"])
+        self.assertIsNone(data["previous"])
+        self.assertEqual(len(data["results"]), 2)
 
 
     def test_search_customer_found(self):
