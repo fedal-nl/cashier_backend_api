@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from .models import Branch, Category, Unit, MenuItem, Ingredient, MenuItemIngredient
 
@@ -79,6 +80,7 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'name_ar', 'items']
 
+    @extend_schema_field(MenuItemSerializer(many=True))
     def get_items(self, obj):
         items = obj.items.filter(
             is_active=True

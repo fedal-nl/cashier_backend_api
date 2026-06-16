@@ -86,6 +86,13 @@ class CustomerOutputSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'phone_number', 'address']
 
 
+class PaginatedCustomerOutputSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = CustomerOutputSerializer(many=True)
+
+
 class DeliveryCompanyOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryCompany
@@ -226,6 +233,13 @@ class OrderOutputSerializer(serializers.ModelSerializer):
             'total_price',
             'updated_at'
         ]
+
+
+class PaginatedOrderOutputSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = OrderOutputSerializer(many=True)
 
 
 class OrderStatusUpdateSerializer(serializers.Serializer):

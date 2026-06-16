@@ -91,6 +91,9 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Cashier API',
     'DESCRIPTION': 'API for managing cashier operations',
     'VERSION': '1.0.0',
+    'ENUM_NAME_OVERRIDES': {
+        'OrderStatusEnum': 'orders.models.Order.OrderStatus',
+    },
 }
 
 WSGI_APPLICATION = 'config.wsgi.application'

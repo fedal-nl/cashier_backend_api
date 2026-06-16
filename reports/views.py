@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from menu.models import Branch
 from orders.models import Order
 
-from .serializers import DailyReportQuerySerializer
+from .serializers import DailyReportQuerySerializer, DailyReportResponseSerializer
 
 
 class DailyReportValidatedData(TypedDict):
@@ -23,7 +23,10 @@ class DailyReportValidatedData(TypedDict):
     status: NotRequired[str]
 
 
-@extend_schema(parameters=[DailyReportQuerySerializer])
+@extend_schema(
+    parameters=[DailyReportQuerySerializer],
+    responses={200: DailyReportResponseSerializer(many=True)}
+)
 class DailyReportView(APIView):
     permission_classes = [IsAuthenticated]
 

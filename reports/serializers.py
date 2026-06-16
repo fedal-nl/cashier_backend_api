@@ -29,3 +29,17 @@ class DailyReportQuerySerializer(serializers.Serializer):
             )
         except Branch.DoesNotExist:
             raise serializers.ValidationError("Invalid branch_id")
+
+
+class DailyReportResponseSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    total_orders = serializers.IntegerField()
+    orders_by_status = serializers.DictField(
+        child=serializers.IntegerField()
+    )
+    total_existing_customers_ordered = serializers.IntegerField()
+    total_new_customers_ordered = serializers.IntegerField()
+    total_revenue = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )

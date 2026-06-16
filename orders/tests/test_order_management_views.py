@@ -47,10 +47,14 @@ class OrderManagementViewTests(TestCase):
         )
 
         self.assertEqual(
-            len(data),
+            data["count"],
             1
         )
 
+        self.assertEqual(
+            len(data["results"]),
+            1
+        )
 
     def test_filter_orders_by_status(self):
         response = self.client.get(
@@ -63,8 +67,49 @@ class OrderManagementViewTests(TestCase):
         )
 
         self.assertEqual(
-            len(response.json()),
+            response.json()["count"],
             1
+        )
+
+    def test_list_orders_can_be_paginated(self):
+        for index in range(3):
+            customer = Customer.objects.create(
+                name=f"Customer {index}",
+                email=f"customer-{index}@test.com"
+            )
+            Order.objects.create(
+                customer=customer,
+                total_price=100,
+                status=Order.OrderStatus.CREATED
+            )
+
+        response = self.client.get(
+            "/api/orders/list/?page_size=2"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            data["count"],
+            4
+        )
+
+        self.assertIsNotNone(
+            data["next"]
+        )
+
+        self.assertIsNone(
+            data["previous"]
+        )
+
+        self.assertEqual(
+            len(data["results"]),
+            2
         )
 
     def test_get_single_order(self):
@@ -286,12 +331,12 @@ class OrderManagementViewTests(TestCase):
         )
 
         self.assertEqual(
-            len(data),
+            data["count"],
             1
         )
 
         self.assertEqual(
-            data[0]["customer"]["name"],
+            data["results"][0]["customer"]["name"],
             "Omar"
         )        
     def test_search_order_by_id(self):
@@ -307,13 +352,45 @@ class OrderManagementViewTests(TestCase):
         )
 
         self.assertEqual(
-            len(data),
+            data["count"],
             1
         )
 
         self.assertEqual(
-            data[0]["id"],
+            data["results"][0]["id"],
             str(self.order.id)
+        )
+
+    def test_search_order_by_customer_name(self):
+        other_customer = Customer.objects.create(
+            name="Ali",
+            email="ali-search@test.com"
+        )
+        Order.objects.create(
+            customer=other_customer,
+            total_price=50,
+            status=Order.OrderStatus.CREATED
+        )
+
+        response = self.client.get(
+            "/api/orders/list/?search=Omar"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            data["count"],
+            1
+        )
+
+        self.assertEqual(
+            data["results"][0]["customer"]["name"],
+            "Omar"
         )
 
     def test_list_order_logs(self):
