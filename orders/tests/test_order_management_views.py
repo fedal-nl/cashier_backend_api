@@ -112,6 +112,80 @@ class OrderManagementViewTests(TestCase):
             2
         )
 
+    def test_today_order_summary_returns_count_revenue_and_status_totals(self):
+        Order.objects.create(
+            customer=self.customer,
+            total_price=25.50,
+            status=Order.OrderStatus.COMPLETED
+        )
+
+        new_customer = Customer.objects.create(
+            name="Sara",
+            email="sara-summary@test.com"
+        )
+        Order.objects.create(
+            customer=new_customer,
+            total_price=10,
+            status=Order.OrderStatus.PAID
+        )
+
+        old_order = Order.objects.create(
+            customer=self.customer,
+            total_price=500,
+            status=Order.OrderStatus.DELIVERED
+        )
+        Order.objects.filter(
+            id=old_order.id
+        ).update(
+            created_at=timezone.now() - timedelta(days=1)
+        )
+
+        response = self.client.get(
+            "/api/orders/summary/today/"
+        )
+
+        data = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            200
+        )
+
+        self.assertEqual(
+            data["total_orders"],
+            3
+        )
+
+        self.assertEqual(
+            data["total_revenue"],
+            "10035.50"
+        )
+
+        self.assertEqual(
+            data["total_existing_customers_ordered"],
+            1
+        )
+
+        self.assertEqual(
+            data["total_new_customers_ordered"],
+            1
+        )
+
+        self.assertEqual(
+            data["orders_by_status"]["created"],
+            1
+        )
+
+        self.assertEqual(
+            data["orders_by_status"]["completed"],
+            1
+        )
+
+        self.assertEqual(
+            data["orders_by_status"]["delivered"],
+            0
+        )
+
     def test_get_single_order(self):
         response = self.client.get(
             f"/api/orders/{self.order.id}/"
