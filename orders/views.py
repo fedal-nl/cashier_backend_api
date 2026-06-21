@@ -1,10 +1,13 @@
+from decimal import Decimal
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from django.db.models import Count, Q, Sum
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Q
 from .serializers import (
     OrderInputSerializer, 
     CustomerInputSerializer, 
@@ -15,7 +18,8 @@ from .serializers import (
     OrderStatusUpdateSerializer,
     OrderLogOutputSerializer,
     PaginatedCustomerOutputSerializer,
-    PaginatedOrderOutputSerializer
+    PaginatedOrderOutputSerializer,
+    TodayOrderSummarySerializer,
 )
 from .models import Customer, DeliveryCompany, Order, OrderLog
 from .pagination import StandardResultsSetPagination
@@ -232,6 +236,64 @@ class OrderListView(APIView):
         return paginator.get_paginated_response(serializer.data)  
   
   
+@extend_schema(responses={200: TodayOrderSummarySerializer})
+class TodayOrderSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Return today's order, revenue, status, and customer summary totals."""
+        today = timezone.localdate()
+        queryset = Order.objects.filter(
+            created_at__date=today
+        )
+
+        totals = queryset.aggregate(
+            total_orders=Count("id"),
+            total_revenue=Sum("total_price")
+        )
+
+        orders_by_status = {
+            status_value: 0
+            for status_value, _ in Order.OrderStatus.choices
+        }
+
+        for row in queryset.values("status").annotate(
+            total=Count("id")
+        ):
+            orders_by_status[row["status"]] = row["total"]
+
+        customer_ids = set(
+            queryset.values_list(
+                "customer_id",
+                flat=True
+            ).distinct()
+        )
+
+        existing_customer_ids = set(
+            Order.objects.filter(
+                customer_id__in=customer_ids,
+                created_at__date__lt=today
+            ).values_list(
+                "customer_id",
+                flat=True
+            ).distinct()
+        )
+
+        total_revenue = totals["total_revenue"] or Decimal("0")
+
+        serializer = TodayOrderSummarySerializer({
+            "total_orders": totals["total_orders"],
+            "total_revenue": total_revenue,
+            "total_existing_customers_ordered": len(existing_customer_ids),
+            "total_new_customers_ordered": len(
+                customer_ids - existing_customer_ids
+            ),
+            "orders_by_status": orders_by_status,
+        })
+
+        return Response(serializer.data)
+
+
 @extend_schema(responses={200: OrderOutputSerializer})    
 class OrderDetailView(RetrieveAPIView):
     queryset = Order.objects.select_related(

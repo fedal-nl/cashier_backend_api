@@ -242,6 +242,19 @@ class PaginatedOrderOutputSerializer(serializers.Serializer):
     results = OrderOutputSerializer(many=True)
 
 
+class TodayOrderSummarySerializer(serializers.Serializer):
+    total_orders = serializers.IntegerField()
+    total_revenue = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+    total_existing_customers_ordered = serializers.IntegerField()
+    total_new_customers_ordered = serializers.IntegerField()
+    orders_by_status = serializers.DictField(
+        child=serializers.IntegerField()
+    )
+
+
 class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=Order.OrderStatus.choices
