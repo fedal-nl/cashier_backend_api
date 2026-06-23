@@ -8,6 +8,8 @@ from decimal import Decimal
 class Category(models.Model):
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -20,6 +22,8 @@ class Category(models.Model):
 class Unit(models.Model):
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -34,6 +38,8 @@ class Branch(models.Model):
     name = models.CharField(max_length=100, db_index=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
         ordering = ['id']
@@ -54,6 +60,8 @@ class MenuItem(models.Model):
     image = models.ImageField(upload_to='menu_items/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     branches = models.ManyToManyField(Branch, related_name='menu_items', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -68,6 +76,8 @@ class Ingredient(models.Model):
     is_active = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -89,6 +99,8 @@ class MenuItemIngredient(models.Model):
     is_removable = models.BooleanField(default=True)
 
     is_addable = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
