@@ -23,7 +23,8 @@ class HealthViewTests(TestCase):
     def test_health_endpoint_returns_unavailable_when_database_check_fails(self, cursor):
         cursor.side_effect = Exception("database unavailable")
 
-        response = self.client.get("/health/")
+        with self.assertLogs("config.views", level="ERROR"):
+            response = self.client.get("/health/")
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(

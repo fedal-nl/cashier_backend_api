@@ -17,6 +17,8 @@ class Customer(models.Model):
     email = models.EmailField(unique=True, blank=True, null=True, verbose_name="البريد الإلكتروني")
     phone_number = models.CharField(max_length=20, blank=True, null=True, unique=True, verbose_name="رقم الهاتف")
     address = models.TextField(blank=True, null=True, verbose_name="العنوان")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -34,6 +36,8 @@ class DeliveryCompany(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     website = models.URLField(blank=True, null=True)
     contact_person = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
         ordering = ['id']
@@ -79,7 +83,7 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.CREATED)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -135,6 +139,7 @@ class OrderLog(models.Model):
         related_name='order_logs'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
         ordering = ['-created_at', '-id']
@@ -158,6 +163,8 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     order_item_note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
@@ -184,6 +191,8 @@ class OrderItemModification(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
     modification_type = models.CharField(max_length=20)  # e.g., 'added', 'removed'
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
