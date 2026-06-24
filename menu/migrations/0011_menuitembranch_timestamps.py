@@ -80,7 +80,7 @@ class Migration(migrations.Migration):
                         ('created_at', models.DateTimeField(auto_now_add=True)),
                         ('updated_at', models.DateTimeField(auto_now=True, db_index=True)),
                         ('branch', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='menu.branch')),
-                        ('menu_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='menu.menuitem')),
+                        ('menu_item', models.ForeignKey(db_column='menuitem_id', on_delete=django.db.models.deletion.CASCADE, to='menu.menuitem')),
                     ],
                     options={
                         'db_table': 'menu_menuitem_branches',
