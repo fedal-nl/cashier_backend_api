@@ -59,7 +59,12 @@ class MenuItem(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(upload_to='menu_items/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    branches = models.ManyToManyField(Branch, related_name='menu_items', blank=True)
+    branches = models.ManyToManyField(
+        Branch,
+        related_name='menu_items',
+        blank=True,
+        through='MenuItemBranch'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
@@ -70,6 +75,26 @@ class MenuItem(models.Model):
     def __str__(self):
         return f"{self.name_ar}"
     
+
+class MenuItemBranch(models.Model):
+    menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
+
+    class Meta:
+        db_table = 'menu_menuitem_branches'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['menu_item', 'branch'],
+                name='unique_menu_item_branch'
+            )
+        ]
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.menu_item.name_ar} | {self.branch.name}"
+
 
 class Ingredient(models.Model):
     name_ar = models.CharField(max_length=100)
