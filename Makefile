@@ -14,6 +14,7 @@ help:
 	@echo "  make runserver     Run Django development server"
 	@echo "  make migrations    Create Django migrations"
 	@echo "  make migrate       Apply Django migrations"
+	@echo "  make migrate-reports Apply Django migrations for reports database"
 	@echo "  make test          Run Django tests"
 	@echo "  make coverage      Run tests with coverage"
 	@echo "  make lint          Run Ruff checks"
@@ -33,6 +34,9 @@ migrations:
 
 migrate:
 	$(BACKEND_EXEC) uv run python manage.py migrate
+
+migrate-reports:
+	$(BACKEND_EXEC) uv run python manage.py migrate --database=reports
 
 test:
 	$(BACKEND_EXEC) uv run python manage.py test
