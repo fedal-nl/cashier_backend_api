@@ -142,7 +142,15 @@ else:
             "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
-        }
+        },
+        "reports": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("REPORTS_DB_NAME", "cashier_reports"),
+            "USER": os.getenv("REPORTS_DB_USER", "postgres"),
+            "PASSWORD": os.getenv("REPORTS_DB_PASSWORD", "postgres"),
+            "HOST": os.getenv("REPORTS_DB_HOST", "localhost"),
+            "PORT": os.getenv("REPORTS_DB_PORT", "5432"),
+        },
     }
 
 
