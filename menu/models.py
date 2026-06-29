@@ -5,6 +5,7 @@ from decimal import Decimal
 
 # Create your models here.
 
+
 class Category(models.Model):
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
@@ -13,11 +14,12 @@ class Category(models.Model):
 
     # make the default ordering by id
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
         verbose_name_plural = "Categories"
 
     def __str__(self):
         return f"{self.name_ar}"
+
 
 class Unit(models.Model):
     name_ar = models.CharField(max_length=100)
@@ -27,7 +29,7 @@ class Unit(models.Model):
 
     # make the default ordering by id
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
         verbose_name_plural = "Units"
 
     def __str__(self):
@@ -42,7 +44,7 @@ class Branch(models.Model):
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
         verbose_name_plural = "Branches"
 
     def __str__(self):
@@ -51,50 +53,46 @@ class Branch(models.Model):
 
 class MenuItem(models.Model):
     name_ar = models.CharField(max_length=100)
-    label_ar = models.CharField(max_length=100, default='', blank=True, null=True)
-    description_ar = models.TextField(default='', blank=True, null=True)
+    label_ar = models.CharField(max_length=100, default="", blank=True, null=True)
+    description_ar = models.TextField(default="", blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
+    category = models.ForeignKey(
+        Category, on_delete=models.CASCADE, related_name="items"
+    )
     quantity = models.IntegerField(default=1)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
-    image = models.ImageField(upload_to='menu_items/', null=True, blank=True)
+    image = models.ImageField(upload_to="menu_items/", null=True, blank=True)
     is_active = models.BooleanField(default=True)
     branches = models.ManyToManyField(
-        Branch,
-        related_name='menu_items',
-        blank=True,
-        through='MenuItemBranch'
+        Branch, related_name="menu_items", blank=True, through="MenuItemBranch"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.name_ar}"
-    
+
 
 class MenuItemBranch(models.Model):
     menu_item = models.ForeignKey(
-        MenuItem,
-        on_delete=models.CASCADE,
-        db_column='menuitem_id'
+        MenuItem, on_delete=models.CASCADE, db_column="menuitem_id"
     )
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
-        db_table = 'menu_menuitem_branches'
+        db_table = "menu_menuitem_branches"
         constraints = [
             models.UniqueConstraint(
-                fields=['menu_item', 'branch'],
-                name='unique_menu_item_branch'
+                fields=["menu_item", "branch"], name="unique_menu_item_branch"
             )
         ]
-        ordering = ['id']
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.menu_item.name_ar} | {self.branch.name}"
@@ -103,24 +101,25 @@ class MenuItemBranch(models.Model):
 class Ingredient(models.Model):
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    price = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00")
+    )
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     # make the default ordering by id
     class Meta:
-        ordering = ['id']
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.name_ar}"
-    
+
 
 class MenuItemIngredient(models.Model):
     menu_item = models.ForeignKey(
-        MenuItem,
-        on_delete=models.CASCADE,
-        related_name='ingredients')
+        MenuItem, on_delete=models.CASCADE, related_name="ingredients"
+    )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
 
     is_default = models.BooleanField(default=True)
@@ -135,11 +134,10 @@ class MenuItemIngredient(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['menu_item', 'ingredient'],
-                name='unique_menu_item_ingredient'
+                fields=["menu_item", "ingredient"], name="unique_menu_item_ingredient"
             )
         ]
-        ordering = ['id']
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.menu_item.name_ar} | {self.ingredient.name_ar}"

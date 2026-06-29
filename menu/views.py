@@ -11,7 +11,7 @@ from .serializers import (
     CategorySerializer,
     UnitSerializer,
     IngredientSerializer,
-    MenuItemIngredientSerializer
+    MenuItemIngredientSerializer,
 )
 
 
@@ -22,22 +22,21 @@ class BranchListView(ListAPIView):
 
 class MenuListView(ListAPIView):
     queryset = Category.objects.prefetch_related(
-        'items__branches',
-        'items__ingredients__ingredient',
-        'items__ingredients__ingredient__unit'
+        "items__branches",
+        "items__ingredients__ingredient",
+        "items__ingredients__ingredient__unit",
     ).filter(is_active=True)
     serializer_class = CategorySerializer
 
     def list(self, request, *args, **kwargs):
         branch_id = request.query_params.get("branch_id")
 
-        if branch_id and not Branch.objects.filter(
-            id=branch_id,
-            is_active=True
-        ).exists():
+        if (
+            branch_id
+            and not Branch.objects.filter(id=branch_id, is_active=True).exists()
+        ):
             return Response(
-                {"branch_id": "Invalid branch_id"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"branch_id": "Invalid branch_id"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         return super().list(request, *args, **kwargs)

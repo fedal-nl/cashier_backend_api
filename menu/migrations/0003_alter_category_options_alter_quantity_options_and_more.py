@@ -4,38 +4,37 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0002_alter_menuitem_description_ar_and_more'),
+        ("menu", "0002_alter_menuitem_description_ar_and_more"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='category',
-            options={'ordering': ['id'], 'verbose_name_plural': 'Categories'},
+            name="category",
+            options={"ordering": ["id"], "verbose_name_plural": "Categories"},
         ),
         migrations.AlterModelOptions(
-            name='quantity',
-            options={'ordering': ['id'], 'verbose_name_plural': 'Quantities'},
+            name="quantity",
+            options={"ordering": ["id"], "verbose_name_plural": "Quantities"},
         ),
         migrations.RemoveField(
-            model_name='category',
-            name='name_en',
+            model_name="category",
+            name="name_en",
         ),
         migrations.RemoveField(
-            model_name='ingredient',
-            name='name_en',
+            model_name="ingredient",
+            name="name_en",
         ),
         migrations.RemoveField(
-            model_name='menuitem',
-            name='description_en',
+            model_name="menuitem",
+            name="description_en",
         ),
         migrations.RemoveField(
-            model_name='menuitem',
-            name='name_en',
+            model_name="menuitem",
+            name="name_en",
         ),
         migrations.RemoveField(
-            model_name='quantity',
-            name='name_en',
+            model_name="quantity",
+            name="name_en",
         ),
     ]

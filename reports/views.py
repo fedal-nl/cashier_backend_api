@@ -25,67 +25,40 @@ class DailyReportValidatedData(TypedDict):
 
 @extend_schema(
     parameters=[DailyReportQuerySerializer],
-    responses={200: DailyReportResponseSerializer(many=True)}
+    responses={200: DailyReportResponseSerializer(many=True)},
 )
 class DailyReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serializer = DailyReportQuerySerializer(
-            data=request.query_params
-        )
-        serializer.is_valid(
-            raise_exception=True
-        )
+        serializer = DailyReportQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
 
-        validated_data = cast(
-            DailyReportValidatedData,
-            serializer.validated_data
-        )
+        validated_data = cast(DailyReportValidatedData, serializer.validated_data)
 
         date_from = validated_data["date_from"]
         date_to = validated_data["date_to"]
 
-        rows_by_day = self._empty_rows_by_day(
-            date_from=date_from,
-            date_to=date_to
-        )
+        rows_by_day = self._empty_rows_by_day(date_from=date_from, date_to=date_to)
 
         orders = Order.objects.filter(
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to
+            created_at__date__gte=date_from, created_at__date__lte=date_to
         )
 
         branch = validated_data.get("branch_id")
         report_status = validated_data.get("status")
 
         if isinstance(branch, Branch):
-            orders = orders.filter(
-                branch=branch
-            )
+            orders = orders.filter(branch=branch)
 
         if report_status:
-            orders = orders.filter(
-                status=report_status
-            )
+            orders = orders.filter(status=report_status)
 
-        self._add_order_totals(
-            rows_by_day=rows_by_day,
-            orders=orders
-        )
-        self._add_status_totals(
-            rows_by_day=rows_by_day,
-            orders=orders
-        )
-        self._add_customer_totals(
-            rows_by_day=rows_by_day,
-            orders=orders
-        )
+        self._add_order_totals(rows_by_day=rows_by_day, orders=orders)
+        self._add_status_totals(rows_by_day=rows_by_day, orders=orders)
+        self._add_customer_totals(rows_by_day=rows_by_day, orders=orders)
 
-        return Response(
-            list(rows_by_day.values()),
-            status=status.HTTP_200_OK
-        )
+        return Response(list(rows_by_day.values()), status=status.HTTP_200_OK)
 
     def _empty_rows_by_day(self, *, date_from, date_to):
         rows_by_day = {}
@@ -96,8 +69,7 @@ class DailyReportView(APIView):
                 "date": current_date.isoformat(),
                 "total_orders": 0,
                 "orders_by_status": {
-                    status_value: 0
-                    for status_value, _ in Order.OrderStatus.choices
+                    status_value: 0 for status_value, _ in Order.OrderStatus.choices
                 },
                 "total_existing_customers_ordered": 0,
                 "total_new_customers_ordered": 0,
@@ -108,63 +80,46 @@ class DailyReportView(APIView):
         return rows_by_day
 
     def _add_order_totals(self, *, rows_by_day, orders):
-        daily_totals = orders.annotate(
-            day=TruncDate("created_at")
-        ).values(
-            "day"
-        ).annotate(
-            total_orders=Count("id"),
-            total_revenue=Sum("total_price")
+        daily_totals = (
+            orders.annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(total_orders=Count("id"), total_revenue=Sum("total_price"))
         )
 
         for daily_total in daily_totals:
             row = rows_by_day[daily_total["day"]]
             row["total_orders"] = daily_total["total_orders"]
-            row["total_revenue"] = self._format_revenue(
-                daily_total["total_revenue"]
-            )
+            row["total_revenue"] = self._format_revenue(daily_total["total_revenue"])
 
     def _add_status_totals(self, *, rows_by_day, orders):
-        daily_status_totals = orders.annotate(
-            day=TruncDate("created_at")
-        ).values(
-            "day",
-            "status"
-        ).annotate(
-            total=Count("id")
+        daily_status_totals = (
+            orders.annotate(day=TruncDate("created_at"))
+            .values("day", "status")
+            .annotate(total=Count("id"))
         )
 
         for status_total in daily_status_totals:
-            rows_by_day[
-                status_total["day"]
-            ]["orders_by_status"][
+            rows_by_day[status_total["day"]]["orders_by_status"][
                 status_total["status"]
             ] = status_total["total"]
 
     def _add_customer_totals(self, *, rows_by_day, orders):
         for day, row in rows_by_day.items():
             customer_ids = set(
-                orders.filter(
-                    created_at__date=day
-                ).values_list(
-                    "customer_id",
-                    flat=True
-                ).distinct()
+                orders.filter(created_at__date=day)
+                .values_list("customer_id", flat=True)
+                .distinct()
             )
 
             existing_customer_ids = set(
                 Order.objects.filter(
-                    customer_id__in=customer_ids,
-                    created_at__date__lt=day
-                ).values_list(
-                    "customer_id",
-                    flat=True
-                ).distinct()
+                    customer_id__in=customer_ids, created_at__date__lt=day
+                )
+                .values_list("customer_id", flat=True)
+                .distinct()
             )
 
-            row["total_existing_customers_ordered"] = len(
-                existing_customer_ids
-            )
+            row["total_existing_customers_ordered"] = len(existing_customer_ids)
             row["total_new_customers_ordered"] = len(
                 customer_ids - existing_customer_ids
             )

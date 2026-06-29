@@ -12,137 +12,79 @@ from menu.models import (
 
 
 class CategoryModelTest(TestCase):
-
     def test_create_category(self):
-        category = Category.objects.create(
-            name_ar="طعام"
-        )
+        category = Category.objects.create(name_ar="طعام")
         self.assertEqual(category.name_ar, "طعام")
         self.assertTrue(category.is_active)
 
     def test_category_str(self):
-        category = Category.objects.create(
-            name_ar="مشروبات"
-        )
+        category = Category.objects.create(name_ar="مشروبات")
         self.assertEqual(str(category), "مشروبات")
 
 
-
 class UnitModelTest(TestCase):
-
     def test_create_unit(self):
-        unit = Unit.objects.create(
-            name_ar="صغير"
-        )
+        unit = Unit.objects.create(name_ar="صغير")
         self.assertEqual(unit.name_ar, "صغير")
 
     def test_unit_str(self):
-        unit = Unit.objects.create(
-            name_ar="كبير"
-        )
+        unit = Unit.objects.create(name_ar="كبير")
         self.assertEqual(str(unit), "كبير")
 
 
 class BranchModelTest(TestCase):
-
     def test_create_branch(self):
-        branch = Branch.objects.create(
-            name="Main Branch",
-            location="Amsterdam"
-        )
+        branch = Branch.objects.create(name="Main Branch", location="Amsterdam")
 
-        self.assertEqual(
-            branch.name,
-            "Main Branch"
-        )
+        self.assertEqual(branch.name, "Main Branch")
 
-        self.assertEqual(
-            str(branch),
-            "Main Branch"
-        )
+        self.assertEqual(str(branch), "Main Branch")
 
     def test_new_menu_item_is_available_for_existing_branches(self):
-        branch = Branch.objects.create(
-            name="Main Branch"
-        )
+        branch = Branch.objects.create(name="Main Branch")
 
-        category = Category.objects.create(
-            name_ar="طعام"
-        )
+        category = Category.objects.create(name_ar="طعام")
 
-        unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        unit = Unit.objects.create(name_ar="عادي")
 
         item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=12.50,
-            category=category,
-            unit=unit
+            name_ar="برجر", price=12.50, category=category, unit=unit
         )
 
-        self.assertIn(
-            branch,
-            item.branches.all()
-        )
+        self.assertIn(branch, item.branches.all())
 
     def test_new_branch_gets_existing_menu_items(self):
-        category = Category.objects.create(
-            name_ar="طعام"
-        )
+        category = Category.objects.create(name_ar="طعام")
 
-        unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        unit = Unit.objects.create(name_ar="عادي")
 
         item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=12.50,
-            category=category,
-            unit=unit
+            name_ar="برجر", price=12.50, category=category, unit=unit
         )
 
-        branch = Branch.objects.create(
-            name="Main Branch"
-        )
+        branch = Branch.objects.create(name="Main Branch")
 
-        self.assertIn(
-            item,
-            branch.menu_items.all()
-        )
+        self.assertIn(item, branch.menu_items.all())
 
 
 class IngredientModelTest(TestCase):
-
     def test_create_ingredient(self):
-        ingredient = Ingredient.objects.create(
-            name_ar="جبنة"
-        )
+        ingredient = Ingredient.objects.create(name_ar="جبنة")
         self.assertTrue(ingredient.is_active)
 
     def test_ingredient_str(self):
-        ingredient = Ingredient.objects.create(
-            name_ar="طماطم"
-        )
+        ingredient = Ingredient.objects.create(name_ar="طماطم")
         self.assertEqual(str(ingredient), "طماطم")
 
 
 class MenuItemModelTest(TestCase):
-
     def setUp(self):
-        self.category = Category.objects.create(
-            name_ar="طعام"
-        )
-        self.unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        self.category = Category.objects.create(name_ar="طعام")
+        self.unit = Unit.objects.create(name_ar="عادي")
 
     def test_create_menu_item(self):
         item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=12.50,
-            category=self.category,
-            unit=self.unit
+            name_ar="برجر", price=12.50, category=self.category, unit=self.unit
         )
 
         self.assertEqual(item.name_ar, "برجر")
@@ -151,41 +93,27 @@ class MenuItemModelTest(TestCase):
 
     def test_menu_item_str(self):
         item = MenuItem.objects.create(
-            name_ar="بيتزا",
-            price=15,
-            category=self.category,
-            unit=self.unit
+            name_ar="بيتزا", price=15, category=self.category, unit=self.unit
         )
 
         self.assertEqual(str(item), "بيتزا")
 
 
 class MenuItemIngredientTest(TestCase):
-
     def setUp(self):
-        self.category = Category.objects.create(
-            name_ar="طعام"
-        )
+        self.category = Category.objects.create(name_ar="طعام")
 
-        self.unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        self.unit = Unit.objects.create(name_ar="عادي")
 
         self.menu_item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=10,
-            category=self.category,
-            unit=self.unit
+            name_ar="برجر", price=10, category=self.category, unit=self.unit
         )
 
-        self.ingredient = Ingredient.objects.create(
-            name_ar="جبنة"
-        )
+        self.ingredient = Ingredient.objects.create(name_ar="جبنة")
 
     def test_create_menu_item_ingredient(self):
         relation = MenuItemIngredient.objects.create(
-            menu_item=self.menu_item,
-            ingredient=self.ingredient
+            menu_item=self.menu_item, ingredient=self.ingredient
         )
 
         self.assertTrue(relation.is_default)
@@ -194,20 +122,17 @@ class MenuItemIngredientTest(TestCase):
 
     def test_unique_constraint(self):
         MenuItemIngredient.objects.create(
-            menu_item=self.menu_item,
-            ingredient=self.ingredient
+            menu_item=self.menu_item, ingredient=self.ingredient
         )
 
         with self.assertRaises(IntegrityError):
             MenuItemIngredient.objects.create(
-                menu_item=self.menu_item,
-                ingredient=self.ingredient
+                menu_item=self.menu_item, ingredient=self.ingredient
             )
 
     def test_string_representation(self):
         relation = MenuItemIngredient.objects.create(
-            menu_item=self.menu_item,
-            ingredient=self.ingredient
+            menu_item=self.menu_item, ingredient=self.ingredient
         )
 
         expected = "برجر | جبنة"
