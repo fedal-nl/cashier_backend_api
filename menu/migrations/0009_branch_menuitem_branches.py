@@ -4,28 +4,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0008_rename_website_label_ar_menuitem_label_ar'),
+        ("menu", "0008_rename_website_label_ar_menuitem_label_ar"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Branch',
+            name="Branch",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(db_index=True, max_length=100)),
-                ('location', models.CharField(blank=True, max_length=255, null=True)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(db_index=True, max_length=100)),
+                ("location", models.CharField(blank=True, max_length=255, null=True)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'verbose_name_plural': 'Branches',
-                'ordering': ['id'],
+                "verbose_name_plural": "Branches",
+                "ordering": ["id"],
             },
         ),
         migrations.AddField(
-            model_name='menuitem',
-            name='branches',
-            field=models.ManyToManyField(blank=True, related_name='menu_items', to='menu.branch'),
+            model_name="menuitem",
+            name="branches",
+            field=models.ManyToManyField(
+                blank=True, related_name="menu_items", to="menu.branch"
+            ),
         ),
     ]

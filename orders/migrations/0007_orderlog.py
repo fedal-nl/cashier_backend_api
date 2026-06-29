@@ -6,27 +6,98 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('orders', '0006_alter_customer_address_alter_customer_email_and_more'),
+        ("orders", "0006_alter_customer_address_alter_customer_email_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='OrderLog',
+            name="OrderLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.CharField(choices=[('created', 'Created'), ('status_updated', 'Status updated')], max_length=20)),
-                ('previous_status', models.CharField(blank=True, choices=[('created', 'تم الإنشاء'), ('preparing', 'قيد التحضير'), ('ready', 'جاهز للاستلام'), ('completed', 'مكتمل'), ('cancelled', 'ملغي'), ('paid', 'مدفوع'), ('picked_up', 'تم الاستلام'), ('delivered', 'تم التوصيل')], max_length=20, null=True)),
-                ('new_status', models.CharField(choices=[('created', 'تم الإنشاء'), ('preparing', 'قيد التحضير'), ('ready', 'جاهز للاستلام'), ('completed', 'مكتمل'), ('cancelled', 'ملغي'), ('paid', 'مدفوع'), ('picked_up', 'تم الاستلام'), ('delivered', 'تم التوصيل')], max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='order_logs', to=settings.AUTH_USER_MODEL)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='order_logs', to='orders.customer')),
-                ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='logs', to='orders.order')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "event_type",
+                    models.CharField(
+                        choices=[
+                            ("created", "Created"),
+                            ("status_updated", "Status updated"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "previous_status",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("created", "تم الإنشاء"),
+                            ("preparing", "قيد التحضير"),
+                            ("ready", "جاهز للاستلام"),
+                            ("completed", "مكتمل"),
+                            ("cancelled", "ملغي"),
+                            ("paid", "مدفوع"),
+                            ("picked_up", "تم الاستلام"),
+                            ("delivered", "تم التوصيل"),
+                        ],
+                        max_length=20,
+                        null=True,
+                    ),
+                ),
+                (
+                    "new_status",
+                    models.CharField(
+                        choices=[
+                            ("created", "تم الإنشاء"),
+                            ("preparing", "قيد التحضير"),
+                            ("ready", "جاهز للاستلام"),
+                            ("completed", "مكتمل"),
+                            ("cancelled", "ملغي"),
+                            ("paid", "مدفوع"),
+                            ("picked_up", "تم الاستلام"),
+                            ("delivered", "تم التوصيل"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="order_logs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "customer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="order_logs",
+                        to="orders.customer",
+                    ),
+                ),
+                (
+                    "order",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="logs",
+                        to="orders.order",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at', '-id'],
+                "ordering": ["-created_at", "-id"],
             },
         ),
     ]

@@ -1,7 +1,13 @@
 from decimal import Decimal
+from typing import cast
 
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -9,14 +15,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import (
-    OrderInputSerializer, 
-    CustomerInputSerializer, 
-    CustomerOutputSerializer, 
+    OrderInputSerializer,
+    CustomerInputSerializer,
+    CustomerOutputSerializer,
     CustomerUpdateSerializer,
     DeliveryCompanyOutputSerializer,
     OrderOutputSerializer,
     OrderStatusUpdateSerializer,
+    OrderUpdateSerializer,
     OrderLogOutputSerializer,
+    OrderTypeSerializer,
     PaginatedCustomerOutputSerializer,
     PaginatedOrderOutputSerializer,
     TodayOrderSummarySerializer,
@@ -24,32 +32,39 @@ from .serializers import (
 from .models import Customer, DeliveryCompany, Order, OrderLog
 from .pagination import StandardResultsSetPagination
 from .services import update_order_status
-from rest_framework.generics import (
-    RetrieveAPIView,
-    UpdateAPIView
-)
+from rest_framework.generics import RetrieveUpdateAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
+
 
 @extend_schema(request=OrderInputSerializer, responses={201: OrderOutputSerializer})
 class OrderCreateView(APIView):
-
     def post(self, request):
         serializer = OrderInputSerializer(data=request.data)
         if serializer.is_valid():
-            order = serializer.save(user=request.user)
-            return Response({"message": "Order created successfully", "order_id": order.pk}, status=status.HTTP_201_CREATED)
+            order = cast(Order, serializer.save(user=request.user))
+            return Response(
+                {"message": "Order created successfully", "order_id": order.pk},
+                status=status.HTTP_201_CREATED,
+            )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(request=CustomerInputSerializer, responses={201: CustomerOutputSerializer})
+@extend_schema(
+    request=CustomerInputSerializer, responses={201: CustomerOutputSerializer}
+)
 class CustomerCreateView(APIView):
-
     def post(self, request):
         serializer = CustomerInputSerializer(data=request.data)
         if serializer.is_valid():
-            customer = serializer.save()
-            return Response({"message": "Customer created successfully", "customer_id": customer.pk}, status=status.HTTP_201_CREATED)
+            customer = cast(Customer, serializer.save())
+            return Response(
+                {
+                    "message": "Customer created successfully",
+                    "customer_id": customer.pk,
+                },
+                status=status.HTTP_201_CREATED,
+            )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -87,7 +102,9 @@ class CustomerListView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-@extend_schema(request=CustomerUpdateSerializer, responses={200: CustomerOutputSerializer})
+@extend_schema(
+    request=CustomerUpdateSerializer, responses={200: CustomerOutputSerializer}
+)
 class CustomerUpdateView(UpdateAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerUpdateSerializer
@@ -95,21 +112,14 @@ class CustomerUpdateView(UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         customer = self.get_object()
 
-        serializer = self.get_serializer(
-            customer,
-            data=request.data,
-            partial=True
-        )
+        serializer = self.get_serializer(customer, data=request.data, partial=True)
 
-        serializer.is_valid(
-            raise_exception=True
-        )
+        serializer.is_valid(raise_exception=True)
 
         customer = serializer.save()
 
         return Response(
-            CustomerOutputSerializer(customer).data,
-            status=status.HTTP_200_OK
+            CustomerOutputSerializer(customer).data, status=status.HTTP_200_OK
         )
 
 
@@ -119,10 +129,50 @@ class DeliveryCompanyListView(APIView):
 
     def get(self, request):
         delivery_companies = DeliveryCompany.objects.all()
-        serializer = DeliveryCompanyOutputSerializer(
-            delivery_companies,
-            many=True
+        serializer = DeliveryCompanyOutputSerializer(delivery_companies, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="List order types",
+    description=(
+        "Returns the supported order types with Arabic labels. "
+        "Use `value` as the `order_type` when creating an order and "
+        "display `label_ar` to the user."
+    ),
+    responses={200: OrderTypeSerializer(many=True)},
+    examples=[
+        OpenApiExample(
+            "Delivery order type",
+            value={"value": "delivery", "label_ar": "توصيل"},
+            response_only=True,
+            status_codes=["200"],
+        ),
+        OpenApiExample(
+            "Takeaway order type",
+            value={"value": "takeaway", "label_ar": "استلام خارجي"},
+            response_only=True,
+            status_codes=["200"],
+        ),
+        OpenApiExample(
+            "Dine-in order type",
+            value={"value": "dine_in", "label_ar": "داخل المطعم"},
+            response_only=True,
+            status_codes=["200"],
         )
+    ],
+)
+class OrderTypeListView(APIView):
+    def get(self, request):
+        order_types = [
+            {
+                "value": value,
+                "label_ar": label,
+            }
+            for value, label in Order.OrderType.choices
+        ]
+
+        serializer = OrderTypeSerializer(order_types, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -132,28 +182,17 @@ class CustomerSearchView(APIView):
         phone = request.query_params.get("phone")
 
         if not phone:
-            return Response(
-                {"error": "Phone required"},
-                status=400
-            )
+            return Response({"error": "Phone required"}, status=400)
 
-        customer = Customer.objects.filter(
-            phone_number=phone
-        ).first()
+        customer = Customer.objects.filter(phone_number=phone).first()
 
         if not customer:
-            return Response(
-                {"exists": False}
-            )
+            return Response({"exists": False})
 
-        serializer = CustomerOutputSerializer(
-            customer
-        )
+        serializer = CustomerOutputSerializer(customer)
 
-        return Response({
-            "exists": True,
-            "customer": serializer.data
-        })
+        return Response({"exists": True, "customer": serializer.data})
+
 
 @extend_schema(
     parameters=[
@@ -184,58 +223,38 @@ class OrderListView(APIView):
 
     def get(self, request):
         queryset = Order.objects.select_related(
-            "customer",
-            "branch",
-            "delivery_company"
-        ).prefetch_related(
-            "items__modifications"
-        )
+            "customer", "branch", "delivery_company"
+        ).prefetch_related("items__modifications")
 
-        status_filter = request.query_params.get(
-            "status"
-        )
+        status_filter = request.query_params.get("status")
 
-        customer_filter = request.query_params.get(
-            "customer"
-        )
+        customer_filter = request.query_params.get("customer")
 
-        search = request.query_params.get(
-            "search"
-        )
+        search = request.query_params.get("search")
 
         if status_filter:
-            queryset = queryset.filter(
-                status=status_filter
-            )
+            queryset = queryset.filter(status=status_filter)
 
         if customer_filter:
-            queryset = queryset.filter(
-                customer__name__icontains=customer_filter
-            )
+            queryset = queryset.filter(customer__name__icontains=customer_filter)
 
         if search:
             queryset = queryset.filter(
-                Q(id__icontains=search) |
-                Q(customer__name__icontains=search)
+                Q(id__icontains=search) | Q(customer__name__icontains=search)
             )
 
-        queryset = queryset.order_by(
-            "-created_at"
-        )
+        queryset = queryset.order_by("-created_at")
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
 
         # Serialize only the requested page to keep large order histories from
         # loading all nested order items and modifications in one response.
-        serializer = OrderOutputSerializer(
-            page,
-            many=True
-        )
+        serializer = OrderOutputSerializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)  
-  
-  
+        return paginator.get_paginated_response(serializer.data)
+
+
 @extend_schema(responses={200: TodayOrderSummarySerializer})
 class TodayOrderSummaryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -243,71 +262,89 @@ class TodayOrderSummaryView(APIView):
     def get(self, request):
         """Return today's order, revenue, status, and customer summary totals."""
         today = timezone.localdate()
-        queryset = Order.objects.filter(
-            created_at__date=today
-        )
+        queryset = Order.objects.filter(created_at__date=today)
 
         totals = queryset.aggregate(
-            total_orders=Count("id"),
-            total_revenue=Sum("total_price")
+            total_orders=Count("id"), total_revenue=Sum("total_price")
         )
 
         orders_by_status = {
-            status_value: 0
-            for status_value, _ in Order.OrderStatus.choices
+            status_value: 0 for status_value, _ in Order.OrderStatus.choices
         }
 
-        for row in queryset.values("status").annotate(
-            total=Count("id")
-        ):
+        for row in queryset.values("status").annotate(total=Count("id")):
             orders_by_status[row["status"]] = row["total"]
 
         customer_ids = set(
-            queryset.values_list(
-                "customer_id",
-                flat=True
-            ).distinct()
+            queryset.exclude(customer_id__isnull=True)
+            .values_list("customer_id", flat=True)
+            .distinct()
         )
 
         existing_customer_ids = set(
             Order.objects.filter(
-                customer_id__in=customer_ids,
-                created_at__date__lt=today
-            ).values_list(
-                "customer_id",
-                flat=True
-            ).distinct()
+                customer_id__in=customer_ids, created_at__date__lt=today
+            )
+            .values_list("customer_id", flat=True)
+            .distinct()
         )
 
         total_revenue = totals["total_revenue"] or Decimal("0")
 
-        serializer = TodayOrderSummarySerializer({
-            "total_orders": totals["total_orders"],
-            "total_revenue": total_revenue,
-            "total_existing_customers_ordered": len(existing_customer_ids),
-            "total_new_customers_ordered": len(
-                customer_ids - existing_customer_ids
-            ),
-            "orders_by_status": orders_by_status,
-        })
+        serializer = TodayOrderSummarySerializer(
+            {
+                "total_orders": totals["total_orders"],
+                "total_revenue": total_revenue,
+                "total_existing_customers_ordered": len(existing_customer_ids),
+                "total_new_customers_ordered": len(
+                    customer_ids - existing_customer_ids
+                ),
+                "orders_by_status": orders_by_status,
+            }
+        )
 
         return Response(serializer.data)
 
 
-@extend_schema(responses={200: OrderOutputSerializer})    
-class OrderDetailView(RetrieveAPIView):
+@extend_schema_view(
+    get=extend_schema(responses={200: OrderOutputSerializer}),
+    put=extend_schema(
+        request=OrderUpdateSerializer,
+        responses={200: OrderOutputSerializer},
+    ),
+    patch=extend_schema(
+        request=OrderUpdateSerializer,
+        responses={200: OrderOutputSerializer},
+    ),
+)
+class OrderDetailView(RetrieveUpdateAPIView):
     queryset = Order.objects.select_related(
-        "customer",
-        "branch",
-        "delivery_company"
-    ).prefetch_related(
-        "items__modifications"
-    )
+        "customer", "branch", "delivery_company"
+    ).prefetch_related("items__modifications")
     serializer_class = OrderOutputSerializer
     permission_classes = [IsAuthenticated]
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        order = self.get_object()
 
-@extend_schema(request=OrderStatusUpdateSerializer, responses={200: OrderOutputSerializer})
+        serializer = OrderUpdateSerializer(
+            order,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+
+        return Response(
+            OrderOutputSerializer(order).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(
+    request=OrderStatusUpdateSerializer, responses={200: OrderOutputSerializer}
+)
 class OrderStatusUpdateView(UpdateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderStatusUpdateSerializer
@@ -316,31 +353,28 @@ class OrderStatusUpdateView(UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         order = self.get_object()
 
-        serializer = self.get_serializer(
-            data=request.data,
-            context={
-                "order": order
-            }
-        )
+        serializer = self.get_serializer(data=request.data, context={"order": order})
 
-        serializer.is_valid(
-            raise_exception=True
-        )
+        serializer.is_valid(raise_exception=True)
 
         order = update_order_status(
             order=order,
             status=serializer.validated_data["status"],
             delivery_company=serializer.validated_data.get("delivery_company_id"),
-            user=request.user
+            user=request.user,
         )
 
-        return Response({
-            "message": "Status updated",
-            "status": order.status,
-            "delivery_company": DeliveryCompanyOutputSerializer(
-                order.delivery_company
-            ).data if order.delivery_company else None
-        })
+        return Response(
+            {
+                "message": "Status updated",
+                "status": order.status,
+                "delivery_company": DeliveryCompanyOutputSerializer(
+                    order.delivery_company
+                ).data
+                if order.delivery_company
+                else None,
+            }
+        )
 
 
 @extend_schema(responses={200: OrderLogOutputSerializer(many=True)})
@@ -348,11 +382,7 @@ class OrderLogListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = OrderLog.objects.select_related(
-            "order",
-            "customer",
-            "created_by"
-        )
+        queryset = OrderLog.objects.select_related("order", "customer", "created_by")
 
         date_filter = request.query_params.get("date")
         customer_filter = request.query_params.get("customer")
@@ -363,31 +393,20 @@ class OrderLogListView(APIView):
             if parsed_date is None:
                 return Response(
                     {"date": "Use YYYY-MM-DD format."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            queryset = queryset.filter(
-                created_at__date=parsed_date
-            )
+            queryset = queryset.filter(created_at__date=parsed_date)
 
         if customer_filter:
             if customer_filter.isdigit():
-                queryset = queryset.filter(
-                    customer_id=customer_filter
-                )
+                queryset = queryset.filter(customer_id=customer_filter)
             else:
-                queryset = queryset.filter(
-                    customer__name__icontains=customer_filter
-                )
+                queryset = queryset.filter(customer__name__icontains=customer_filter)
 
         if status_filter:
-            queryset = queryset.filter(
-                new_status=status_filter
-            )
+            queryset = queryset.filter(new_status=status_filter)
 
-        serializer = OrderLogOutputSerializer(
-            queryset,
-            many=True
-        )
+        serializer = OrderLogOutputSerializer(queryset, many=True)
 
         return Response(serializer.data)

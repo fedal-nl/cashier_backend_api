@@ -12,7 +12,4 @@ class AuthResponseSerializer(serializers.Serializer):
 
 class MeResponseSerializer(serializers.Serializer):
     authenticated = serializers.BooleanField()
-    username = serializers.CharField(
-        required=False,
-        allow_null=True
-    )
+    username = serializers.CharField(required=False, allow_null=True)

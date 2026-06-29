@@ -5,29 +5,48 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('orders', '0007_orderlog'),
+        ("orders", "0007_orderlog"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DeliveryCompany',
+            name="DeliveryCompany",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(blank=True, max_length=100, null=True)),
-                ('phone_number', models.CharField(blank=True, max_length=20, null=True)),
-                ('website', models.URLField(blank=True, null=True)),
-                ('contact_person', models.CharField(blank=True, max_length=100, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(blank=True, max_length=100, null=True)),
+                (
+                    "phone_number",
+                    models.CharField(blank=True, max_length=20, null=True),
+                ),
+                ("website", models.URLField(blank=True, null=True)),
+                (
+                    "contact_person",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
             ],
             options={
-                'verbose_name_plural': 'Delivery companies',
-                'ordering': ['id'],
+                "verbose_name_plural": "Delivery companies",
+                "ordering": ["id"],
             },
         ),
         migrations.AddField(
-            model_name='order',
-            name='delivery_company',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='orders', to='orders.deliverycompany'),
+            model_name="order",
+            name="delivery_company",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="orders",
+                to="orders.deliverycompany",
+            ),
         ),
     ]

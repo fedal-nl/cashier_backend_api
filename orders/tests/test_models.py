@@ -1,3 +1,4 @@
+from django.db.models import ProtectedError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -11,6 +12,7 @@ from orders.models import (
 )
 
 from menu.models import (
+    Branch,
     Category,
     Unit,
     MenuItem,
@@ -19,86 +21,71 @@ from menu.models import (
 
 
 class CustomerModelTest(TestCase):
-
     def test_create_customer(self):
         customer = Customer.objects.create(
             name="Omar",
             email="omar@test.com",
             phone_number="123456",
-            address="Amsterdam"
+            address="Amsterdam",
         )
 
         self.assertEqual(customer.name, "Omar")
         self.assertEqual(str(customer), "Omar - omar@test.com")
 
     def test_unique_email(self):
-        Customer.objects.create(
-            name="User1",
-            email="test@test.com"
-        )
+        Customer.objects.create(name="User1", email="test@test.com")
 
         with self.assertRaises(Exception):
-            Customer.objects.create(
-                name="User2",
-                email="test@test.com"
-            )
+            Customer.objects.create(name="User2", email="test@test.com")
 
 
 class DeliveryCompanyModelTest(TestCase):
-
     def test_create_delivery_company(self):
         delivery_company = DeliveryCompany.objects.create(
             name="Fast Delivery",
             phone_number="0771234567",
             website="https://delivery.example.com",
-            contact_person="Sara"
+            contact_person="Sara",
         )
 
-        self.assertEqual(
-            delivery_company.name,
-            "Fast Delivery"
-        )
+        self.assertEqual(delivery_company.name, "Fast Delivery")
 
-        self.assertEqual(
-            str(delivery_company),
-            "Fast Delivery"
-        )
+        self.assertEqual(str(delivery_company), "Fast Delivery")
 
     def test_delivery_company_name_is_optional(self):
         delivery_company = DeliveryCompany.objects.create()
 
         self.assertEqual(
-            str(delivery_company),
-            f"Delivery company #{delivery_company.id}"
+            str(delivery_company), f"Delivery company #{delivery_company.id}"
         )
 
 
 class OrderModelTest(TestCase):
-
     def setUp(self):
-        self.customer = Customer.objects.create(
-            name="Omar",
-            email="omar@test.com"
-        )
+        self.customer = Customer.objects.create(name="Omar", email="omar@test.com")
 
         self.status = Order.OrderStatus.CREATED
+        self.branch = Branch.objects.create(name="Main Branch")
 
     def test_create_order(self):
         order = Order.objects.create(
             customer=self.customer,
+            branch=self.branch,
             total_price=50,
-            status=self.status
+            status=self.status,
         )
 
         self.assertIsNotNone(order.id)  # UUID generated
         self.assertEqual(order.customer, self.customer)
+        self.assertEqual(order.branch, self.branch)
         self.assertEqual(order.status, self.status)
 
     def test_order_str(self):
         order = Order.objects.create(
             customer=self.customer,
+            branch=self.branch,
             total_price=20,
-            status=self.status
+            status=self.status,
         )
 
         expected = f"Order #{order.id} - {self.customer.name} - {self.status}"
@@ -106,16 +93,14 @@ class OrderModelTest(TestCase):
 
 
 class OrderLogModelTest(TestCase):
-
     def setUp(self):
-        self.customer = Customer.objects.create(
-            name="Omar",
-            email="omar-log@test.com"
-        )
+        self.customer = Customer.objects.create(name="Omar", email="omar-log@test.com")
+        self.branch = Branch.objects.create(name="Main Branch")
         self.order = Order.objects.create(
             customer=self.customer,
+            branch=self.branch,
             total_price=20,
-            status=Order.OrderStatus.CREATED
+            status=Order.OrderStatus.CREATED,
         )
 
     def test_create_order_log(self):
@@ -123,7 +108,7 @@ class OrderLogModelTest(TestCase):
             order=self.order,
             customer=self.customer,
             event_type=OrderLog.EventType.CREATED,
-            new_status=Order.OrderStatus.CREATED
+            new_status=Order.OrderStatus.CREATED,
         )
 
         self.assertEqual(log.order, self.order)
@@ -137,7 +122,7 @@ class OrderLogModelTest(TestCase):
             customer=self.customer,
             event_type=OrderLog.EventType.STATUS_UPDATED,
             previous_status=Order.OrderStatus.CREATED,
-            new_status=Order.OrderStatus.PREPARING
+            new_status=Order.OrderStatus.PREPARING,
         )
 
         expected = f"status_updated - Order #{self.order.id} - preparing"
@@ -145,35 +130,25 @@ class OrderLogModelTest(TestCase):
 
 
 class OrderItemModelTest(TestCase):
-
     def setUp(self):
-        self.customer = Customer.objects.create(
-            name="Omar",
-            email="omar@test.com"
-        )
+        self.customer = Customer.objects.create(name="Omar", email="omar@test.com")
 
         self.status = Order.OrderStatus.CREATED
+        self.branch = Branch.objects.create(name="Main Branch")
 
         self.order = Order.objects.create(
             customer=self.customer,
+            branch=self.branch,
             total_price=0,
-            status=self.status
+            status=self.status,
         )
 
-        self.category = Category.objects.create(
-            name_ar="طعام"
-        )
+        self.category = Category.objects.create(name_ar="طعام")
 
-        self.unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        self.unit = Unit.objects.create(name_ar="عادي")
 
         self.menu_item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=10,
-            category=self.category,
-            quantity=1,
-            unit=self.unit
+            name_ar="برجر", price=10, category=self.category, quantity=1, unit=self.unit
         )
 
     def test_create_order_item(self):
@@ -183,7 +158,7 @@ class OrderItemModelTest(TestCase):
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=2,
-            total_price=20
+            total_price=20,
         )
 
         self.assertEqual(item.order, self.order)
@@ -196,7 +171,7 @@ class OrderItemModelTest(TestCase):
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=2,
-            total_price=20
+            total_price=20,
         )
 
         expected = "2 x برجر - $20"
@@ -209,44 +184,38 @@ class OrderItemModelTest(TestCase):
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=1,
-            total_price=10
+            total_price=10,
         )
 
         self.order.delete()
 
         self.assertEqual(OrderItem.objects.count(), 0)
 
+    def test_branch_delete_is_protected(self):
+        with self.assertRaises(ProtectedError):
+            self.branch.delete()
+
 
 class OrderItemModificationTest(TestCase):
-
     def setUp(self):
-        self.customer = Customer.objects.create(
-            name="Omar",
-            email="omar@test.com"
-        )
+        self.customer = Customer.objects.create(name="Omar", email="omar@test.com")
 
         self.status = Order.OrderStatus.CREATED
+        self.branch = Branch.objects.create(name="Main Branch")
 
         self.order = Order.objects.create(
             customer=self.customer,
+            branch=self.branch,
             total_price=0,
-            status=self.status
+            status=self.status,
         )
 
-        self.category = Category.objects.create(
-            name_ar="طعام"
-        )
+        self.category = Category.objects.create(name_ar="طعام")
 
-        self.unit = Unit.objects.create(
-            name_ar="عادي"
-        )
+        self.unit = Unit.objects.create(name_ar="عادي")
 
         self.menu_item = MenuItem.objects.create(
-            name_ar="برجر",
-            price=10,
-            category=self.category,
-            quantity=1,
-            unit=self.unit
+            name_ar="برجر", price=10, category=self.category, quantity=1, unit=self.unit
         )
 
         self.order_item = OrderItem.objects.create(
@@ -255,20 +224,17 @@ class OrderItemModificationTest(TestCase):
             menu_item_name_ar="برجر",
             menu_item_base_price=10,
             quantity=1,
-            total_price=10
+            total_price=10,
         )
 
-        self.ingredient = Ingredient.objects.create(
-            name_ar="جبنة",
-            unit=self.unit
-        )
+        self.ingredient = Ingredient.objects.create(name_ar="جبنة", unit=self.unit)
 
     def test_create_modification(self):
         mod = OrderItemModification.objects.create(
             order_item=self.order_item,
             ingredient=self.ingredient,
             ingredient_name_ar="جبنة",
-            modification_type="added"
+            modification_type="added",
         )
 
         self.assertEqual(mod.order_item, self.order_item)
@@ -278,7 +244,7 @@ class OrderItemModificationTest(TestCase):
             order_item=self.order_item,
             ingredient=self.ingredient,
             ingredient_name_ar="جبنة",
-            modification_type="added"
+            modification_type="added",
         )
 
         expected = "Added جبنة"
@@ -289,7 +255,7 @@ class OrderItemModificationTest(TestCase):
             order_item=self.order_item,
             ingredient=self.ingredient,
             ingredient_name_ar="جبنة",
-            modification_type="added"
+            modification_type="added",
         )
 
         self.order_item.delete()

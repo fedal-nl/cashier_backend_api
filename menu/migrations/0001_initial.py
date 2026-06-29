@@ -5,80 +5,149 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name_en', models.CharField(max_length=100)),
-                ('name_ar', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name_en", models.CharField(max_length=100)),
+                ("name_ar", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'ordering': ['id'],
+                "ordering": ["id"],
             },
         ),
         migrations.CreateModel(
-            name='Ingredient',
+            name="Ingredient",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name_en', models.CharField(max_length=100)),
-                ('name_ar', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name_en", models.CharField(max_length=100)),
+                ("name_ar", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'ordering': ['id'],
+                "ordering": ["id"],
             },
         ),
         migrations.CreateModel(
-            name='Quantity',
+            name="Quantity",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name_en', models.CharField(max_length=100)),
-                ('name_ar', models.CharField(max_length=100)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name_en", models.CharField(max_length=100)),
+                ("name_ar", models.CharField(max_length=100)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'ordering': ['id'],
+                "ordering": ["id"],
             },
         ),
         migrations.CreateModel(
-            name='MenuItem',
+            name="MenuItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name_en', models.CharField(max_length=100)),
-                ('name_ar', models.CharField(max_length=100)),
-                ('description_en', models.TextField()),
-                ('description_ar', models.TextField()),
-                ('price', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('image', models.ImageField(blank=True, null=True, upload_to='menu_items/')),
-                ('is_active', models.BooleanField(default=True)),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='menu.category')),
-                ('quantity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='menu.quantity')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name_en", models.CharField(max_length=100)),
+                ("name_ar", models.CharField(max_length=100)),
+                ("description_en", models.TextField()),
+                ("description_ar", models.TextField()),
+                ("price", models.DecimalField(decimal_places=2, max_digits=10)),
+                (
+                    "image",
+                    models.ImageField(blank=True, null=True, upload_to="menu_items/"),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "category",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="menu.category"
+                    ),
+                ),
+                (
+                    "quantity",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="menu.quantity"
+                    ),
+                ),
             ],
             options={
-                'ordering': ['id'],
+                "ordering": ["id"],
             },
         ),
         migrations.CreateModel(
-            name='MenuItemIngredient',
+            name="MenuItemIngredient",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_default', models.BooleanField(default=True)),
-                ('is_removable', models.BooleanField(default=True)),
-                ('is_addable', models.BooleanField(default=True)),
-                ('ingredient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='menu.ingredient')),
-                ('menu_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ingredients', to='menu.menuitem')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("is_default", models.BooleanField(default=True)),
+                ("is_removable", models.BooleanField(default=True)),
+                ("is_addable", models.BooleanField(default=True)),
+                (
+                    "ingredient",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="menu.ingredient",
+                    ),
+                ),
+                (
+                    "menu_item",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ingredients",
+                        to="menu.menuitem",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['id'],
-                'constraints': [models.UniqueConstraint(fields=('menu_item', 'ingredient'), name='unique_menu_item_ingredient')],
+                "ordering": ["id"],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("menu_item", "ingredient"),
+                        name="unique_menu_item_ingredient",
+                    )
+                ],
             },
         ),
     ]

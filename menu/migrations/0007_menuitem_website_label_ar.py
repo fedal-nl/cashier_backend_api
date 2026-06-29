@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0006_alter_menuitem_category'),
+        ("menu", "0006_alter_menuitem_category"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='menuitem',
-            name='website_label_ar',
-            field=models.CharField(blank=True, default='', max_length=100, null=True),
+            model_name="menuitem",
+            name="website_label_ar",
+            field=models.CharField(blank=True, default="", max_length=100, null=True),
         ),
     ]

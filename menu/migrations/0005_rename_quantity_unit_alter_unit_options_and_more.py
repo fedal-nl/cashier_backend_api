@@ -5,33 +5,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0004_ingredient_price_ingredient_quantity'),
+        ("menu", "0004_ingredient_price_ingredient_quantity"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='Quantity',
-            new_name='Unit',
+            old_name="Quantity",
+            new_name="Unit",
         ),
         migrations.AlterModelOptions(
-            name='unit',
-            options={'ordering': ['id'], 'verbose_name_plural': 'Units'},
+            name="unit",
+            options={"ordering": ["id"], "verbose_name_plural": "Units"},
         ),
         migrations.RenameField(
-            model_name='ingredient',
-            old_name='quantity',
-            new_name='unit',
+            model_name="ingredient",
+            old_name="quantity",
+            new_name="unit",
         ),
         migrations.AddField(
-            model_name='menuitem',
-            name='unit',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='menu.unit'),
+            model_name="menuitem",
+            name="unit",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="menu.unit",
+            ),
         ),
         migrations.AlterField(
-            model_name='menuitem',
-            name='quantity',
+            model_name="menuitem",
+            name="quantity",
             field=models.IntegerField(default=1),
         ),
     ]

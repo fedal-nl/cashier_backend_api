@@ -5,24 +5,34 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0009_branch_menuitem_branches'),
-        ('orders', '0009_order_orders_orde_created_0e92de_idx_and_more'),
+        ("menu", "0009_branch_menuitem_branches"),
+        ("orders", "0009_order_orders_orde_created_0e92de_idx_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='branch',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='orders', to='menu.branch'),
+            model_name="order",
+            name="branch",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="orders",
+                to="menu.branch",
+            ),
         ),
         migrations.AddIndex(
-            model_name='order',
-            index=models.Index(fields=['branch', 'created_at'], name='orders_orde_branch__eed405_idx'),
+            model_name="order",
+            index=models.Index(
+                fields=["branch", "created_at"], name="orders_orde_branch__eed405_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='order',
-            index=models.Index(fields=['branch', 'created_at', 'status'], name='orders_orde_branch__c9e39d_idx'),
+            model_name="order",
+            index=models.Index(
+                fields=["branch", "created_at", "status"],
+                name="orders_orde_branch__c9e39d_idx",
+            ),
         ),
     ]

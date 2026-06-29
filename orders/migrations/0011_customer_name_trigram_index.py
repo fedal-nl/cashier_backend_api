@@ -4,7 +4,7 @@ from django.db import migrations
 
 
 def create_customer_name_trigram_index(apps, schema_editor):
-    if schema_editor.connection.vendor != 'postgresql':
+    if schema_editor.connection.vendor != "postgresql":
         return
 
     schema_editor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
@@ -15,16 +15,15 @@ def create_customer_name_trigram_index(apps, schema_editor):
 
 
 def drop_customer_name_trigram_index(apps, schema_editor):
-    if schema_editor.connection.vendor != 'postgresql':
+    if schema_editor.connection.vendor != "postgresql":
         return
 
     schema_editor.execute("DROP INDEX IF EXISTS customer_name_trgm_idx")
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('orders', '0010_order_branch_order_orders_orde_branch__eed405_idx_and_more'),
+        ("orders", "0010_order_branch_order_orders_orde_branch__eed405_idx_and_more"),
     ]
 
     operations = [

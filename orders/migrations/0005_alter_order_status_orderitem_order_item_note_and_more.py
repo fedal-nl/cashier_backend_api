@@ -4,23 +4,35 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('orders', '0004_alter_customer_email'),
+        ("orders", "0004_alter_customer_email"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='order',
-            name='status',
-            field=models.CharField(choices=[('created', 'تم الإنشاء'), ('preparing', 'قيد التحضير'), ('ready', 'جاهز للاستلام'), ('completed', 'مكتمل'), ('cancelled', 'ملغي'), ('paid', 'مدفوع'), ('picked_up', 'تم الاستلام'), ('delivered', 'تم التوصيل')], default='created', max_length=20),
+            model_name="order",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("created", "تم الإنشاء"),
+                    ("preparing", "قيد التحضير"),
+                    ("ready", "جاهز للاستلام"),
+                    ("completed", "مكتمل"),
+                    ("cancelled", "ملغي"),
+                    ("paid", "مدفوع"),
+                    ("picked_up", "تم الاستلام"),
+                    ("delivered", "تم التوصيل"),
+                ],
+                default="created",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='orderitem',
-            name='order_item_note',
+            model_name="orderitem",
+            name="order_item_note",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.DeleteModel(
-            name='OrderStatus',
+            name="OrderStatus",
         ),
     ]

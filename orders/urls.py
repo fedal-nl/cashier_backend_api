@@ -1,24 +1,31 @@
 from django.urls import path
 from .views import (
-    CustomerCreateView, 
-    CustomerListView, 
+    CustomerCreateView,
+    CustomerListView,
     CustomerSearchView,
     CustomerUpdateView,
     DeliveryCompanyListView,
     OrderCreateView,
     OrderListView,
+    OrderTypeListView,
     OrderDetailView,
     OrderStatusUpdateView,
     OrderLogListView,
     TodayOrderSummaryView,
 )
+
 urlpatterns = [
     path("", OrderCreateView.as_view(), name="create-order"),
     path("customers/", CustomerCreateView.as_view(), name="create-customer"),
     path("customers/list/", CustomerListView.as_view(), name="list-customers"),
     path("customers/search/", CustomerSearchView.as_view(), name="search-customer"),
     path("customers/<int:pk>/", CustomerUpdateView.as_view(), name="update-customer"),
-    path("delivery-companies/", DeliveryCompanyListView.as_view(), name="list-delivery-companies"),
+    path(
+        "delivery-companies/",
+        DeliveryCompanyListView.as_view(),
+        name="list-delivery-companies",
+    ),
+    path("types/", OrderTypeListView.as_view(), name="list-order-types"),
     path("logs/", OrderLogListView.as_view(), name="list-order-logs"),
     path("list/", OrderListView.as_view(), name="list-orders"),
     path("summary/today/", TodayOrderSummaryView.as_view(), name="today-order-summary"),

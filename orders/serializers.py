@@ -10,7 +10,7 @@ from .models import (
 from menu.models import Ingredient, MenuItem
 from menu.models import Branch
 from menu.serializers import BranchSerializer
-from .services import create_order
+from .services import create_order, replace_order_items
 
 
 class OrderItemModificationInputSerializer(serializers.Serializer):
@@ -21,23 +21,27 @@ class OrderItemModificationInputSerializer(serializers.Serializer):
 
 
 class OrderItemModificationOutputSerializer(serializers.ModelSerializer):
-    ingredient_id = serializers.IntegerField(source='ingredient.id')
-    ingredient_name_ar = serializers.CharField(source='ingredient.name_ar')
-    ingredient_price = serializers.DecimalField(source='ingredient.price', max_digits=10, decimal_places=2)
-    unit_id = serializers.IntegerField(source='ingredient.unit.id', allow_null=True)
-    unit_name_ar = serializers.CharField(source='ingredient.unit.name_ar', allow_null=True)
+    ingredient_id = serializers.IntegerField(source="ingredient.id")
+    ingredient_name_ar = serializers.CharField(source="ingredient.name_ar")
+    ingredient_price = serializers.DecimalField(
+        source="ingredient.price", max_digits=10, decimal_places=2
+    )
+    unit_id = serializers.IntegerField(source="ingredient.unit.id", allow_null=True)
+    unit_name_ar = serializers.CharField(
+        source="ingredient.unit.name_ar", allow_null=True
+    )
 
     class Meta:
         model = OrderItemModification
         fields = [
-            'id',
-            'ingredient_id',
-            'ingredient_name_ar',
-            'ingredient_price',
-            'unit_id',
-            'unit_name_ar',
-            'quantity',
-            'modification_type'
+            "id",
+            "ingredient_id",
+            "ingredient_name_ar",
+            "ingredient_price",
+            "unit_id",
+            "unit_name_ar",
+            "quantity",
+            "modification_type",
         ]
 
 
@@ -49,13 +53,9 @@ class OrderItemInputSerializer(serializers.Serializer):
 
 
 class OrderItemOutputSerializer(serializers.ModelSerializer):
-    menu_item_id = serializers.IntegerField(
-        source="menu_item.id"
-    )
+    menu_item_id = serializers.IntegerField(source="menu_item.id")
 
-    modifications = OrderItemModificationOutputSerializer(
-        many=True
-    )
+    modifications = OrderItemModificationOutputSerializer(many=True)
 
     class Meta:
         model = OrderItem
@@ -70,10 +70,13 @@ class OrderItemOutputSerializer(serializers.ModelSerializer):
             "modifications",
         ]
 
+
 class CustomerInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField(required=False, allow_blank=True)
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    phone_number = serializers.CharField(
+        max_length=20, required=False, allow_blank=True
+    )
     address = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
     def create(self, validated_data):
@@ -83,7 +86,7 @@ class CustomerInputSerializer(serializers.Serializer):
 class CustomerOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'email', 'phone_number', 'address']
+        fields = ["id", "name", "email", "phone_number", "address"]
 
 
 class PaginatedCustomerOutputSerializer(serializers.Serializer):
@@ -97,141 +100,330 @@ class DeliveryCompanyOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryCompany
         fields = [
-            'id',
-            'name',
-            'phone_number',
-            'website',
-            'contact_person',
+            "id",
+            "name",
+            "phone_number",
+            "website",
+            "contact_person",
         ]
+
+
+class OrderTypeSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label_ar = serializers.CharField()
 
 
 class CustomerUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['name', 'email', 'phone_number', 'address']
+        fields = ["name", "email", "phone_number", "address"]
         extra_kwargs = {
-            'name': {'required': False},
-            'email': {'required': False, 'allow_blank': True, 'allow_null': True},
-            'phone_number': {'required': False, 'allow_blank': True, 'allow_null': True},
-            'address': {'required': False, 'allow_blank': True, 'allow_null': True},
+            "name": {"required": False},
+            "email": {"required": False, "allow_blank": True, "allow_null": True},
+            "phone_number": {
+                "required": False,
+                "allow_blank": True,
+                "allow_null": True,
+            },
+            "address": {"required": False, "allow_blank": True, "allow_null": True},
         }
 
 
 class OrderInputSerializer(serializers.Serializer):
-    customer_id = serializers.IntegerField()
-    branch_id = serializers.IntegerField(required=False)
-    delivery_company_id = serializers.IntegerField()
+    customer_id = serializers.IntegerField(required=False, allow_null=True)
+    branch_id = serializers.IntegerField()
+    delivery_company_id = serializers.IntegerField(required=False, allow_null=True)
+    order_type = serializers.ChoiceField(
+        choices=Order.OrderType.choices, default=Order.OrderType.DELIVERY
+    )
     items = OrderItemInputSerializer(many=True)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        
-        # check that the customer exists
-        try:
-            customer = Customer.objects.get(id=attrs['customer_id'])
-            attrs['customer'] = customer
-        except Customer.DoesNotExist:
-            raise serializers.ValidationError("Invalid customer_id")
+        order_type = attrs.get("order_type", Order.OrderType.DELIVERY)
+        customer_id = attrs.get("customer_id")
+        delivery_company_id = attrs.get("delivery_company_id")
 
-        try:
-            delivery_company = DeliveryCompany.objects.get(
-                id=attrs['delivery_company_id']
-            )
-            attrs['delivery_company'] = delivery_company
-        except DeliveryCompany.DoesNotExist:
-            raise serializers.ValidationError("Invalid delivery_company_id")
-
-        branch = None
-        if attrs.get('branch_id'):
-            try:
-                branch = Branch.objects.get(
-                    id=attrs['branch_id'],
-                    is_active=True
+        if order_type == Order.OrderType.DELIVERY:
+            if not customer_id:
+                raise serializers.ValidationError(
+                    {"customer_id": "This field is required for delivery orders."}
                 )
-                attrs['branch'] = branch
-            except Branch.DoesNotExist:
-                raise serializers.ValidationError("Invalid branch_id")
-        
+            if not delivery_company_id:
+                raise serializers.ValidationError(
+                    {
+                        "delivery_company_id": "This field is required for delivery orders."
+                    }
+                )
+
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+                attrs["customer"] = customer
+            except Customer.DoesNotExist:
+                raise serializers.ValidationError("Invalid customer_id")
+        else:
+            attrs["customer"] = None
+
+        if delivery_company_id:
+            try:
+                delivery_company = DeliveryCompany.objects.get(id=delivery_company_id)
+                attrs["delivery_company"] = delivery_company
+            except DeliveryCompany.DoesNotExist:
+                raise serializers.ValidationError("Invalid delivery_company_id")
+        else:
+            attrs["delivery_company"] = None
+
+        try:
+            branch = Branch.objects.get(id=attrs["branch_id"], is_active=True)
+            attrs["branch"] = branch
+        except Branch.DoesNotExist:
+            raise serializers.ValidationError("Invalid branch_id")
+
         # check that there is at least one item in the order
-        if not attrs['items']:
+        if not attrs["items"]:
             raise serializers.ValidationError("Order must have at least one item")
 
-        if branch is not None:
-            for item in attrs['items']:
-                if not MenuItem.objects.filter(
-                    id=item['menu_item_id'],
-                    branches=branch
-                ).exists():
-                    raise serializers.ValidationError(
-                        f"menu_item_id {item['menu_item_id']} is not available for this branch"
-                    )
-        
+        for item in attrs["items"]:
+            if not MenuItem.objects.filter(id=item["menu_item_id"]).exists():
+                raise serializers.ValidationError(
+                    f"Invalid menu_item_id: {item['menu_item_id']}"
+                )
+
+            if not MenuItem.objects.filter(
+                id=item["menu_item_id"], branches=branch
+            ).exists():
+                raise serializers.ValidationError(
+                    f"menu_item_id {item['menu_item_id']} is not available for this branch"
+                )
+
         return attrs
-        
-    def create(self, validated_data: dict) -> Order:
-        user = validated_data.pop('user', None)
-        # Convert the input data into the format expected by the create_order service function
+
+    def _build_items_data(self, validated_data: dict) -> list[dict]:
         items_data = []
-        for item in validated_data['items']:
+        for item in validated_data["items"]:
             try:
-                menu_item = MenuItem.objects.get(id=item['menu_item_id'])
+                menu_item = MenuItem.objects.get(id=item["menu_item_id"])
             except MenuItem.DoesNotExist:
-                raise serializers.ValidationError(f"Invalid menu_item_id: {item['menu_item_id']}")
-            
+                raise serializers.ValidationError(
+                    f"Invalid menu_item_id: {item['menu_item_id']}"
+                )
+
             modifications_data = []
-            for mod in item.get('modifications', []):
+            for mod in item.get("modifications", []):
                 try:
-                    ingredient = Ingredient.objects.get(id=mod['ingredient_id'])
+                    ingredient = Ingredient.objects.get(id=mod["ingredient_id"])
                 except Ingredient.DoesNotExist:
-                    raise serializers.ValidationError(f"Invalid ingredient_id: {mod['ingredient_id']}")
-                
-                modifications_data.append({
-                    "ingredient": ingredient,
-                    "name_ar": mod['name_ar'],
-                    "type": mod['type'],
-                    "quantity": mod.get('quantity', 1)
-                })
-            
-            items_data.append({
-                "menu_item": menu_item,
-                "name_ar": menu_item.name_ar,
-                "base_price": menu_item.price,
-                "quantity": item['quantity'],
-                "order_item_note": item.get('note', ""),
-                "modifications": modifications_data
-            })
-        
+                    raise serializers.ValidationError(
+                        f"Invalid ingredient_id: {mod['ingredient_id']}"
+                    )
+
+                modifications_data.append(
+                    {
+                        "ingredient": ingredient,
+                        "name_ar": mod["name_ar"],
+                        "type": mod["type"],
+                        "quantity": mod.get("quantity", 1),
+                    }
+                )
+
+            items_data.append(
+                {
+                    "menu_item": menu_item,
+                    "name_ar": menu_item.name_ar,
+                    "base_price": menu_item.price,
+                    "quantity": item["quantity"],
+                    "order_item_note": item.get("note", ""),
+                    "modifications": modifications_data,
+                }
+            )
+
+        return items_data
+
+    def create(self, validated_data: dict) -> Order:
+        user = validated_data.pop("user", None)
+        items_data = self._build_items_data(validated_data)
+
         order = create_order(
-            customer=validated_data['customer'],
-            branch=validated_data.get('branch'),
-            delivery_company=validated_data['delivery_company'],
-            status=validated_data.get('status', Order.OrderStatus.CREATED),
+            customer=validated_data["customer"],
+            branch=validated_data.get("branch"),
+            delivery_company=validated_data["delivery_company"],
+            order_type=validated_data.get("order_type", Order.OrderType.DELIVERY),
+            status=validated_data.get("status", Order.OrderStatus.CREATED),
             items_data=items_data,
-            note=validated_data.get('note', ""),
-            user=user
+            note=validated_data.get("note", ""),
+            user=user,
         )
         return order
 
 
+class OrderUpdateSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField(required=False, allow_null=True)
+    branch_id = serializers.IntegerField(required=False)
+    delivery_company_id = serializers.IntegerField(required=False, allow_null=True)
+    status = serializers.ChoiceField(
+        choices=Order.OrderStatus.choices,
+        required=False,
+    )
+    order_type = serializers.ChoiceField(
+        choices=Order.OrderType.choices,
+        required=False,
+    )
+    items = OrderItemInputSerializer(many=True, required=False)
+    note = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    def validate(self, attrs):
+        order = self.instance
+
+        if order is None:
+            raise serializers.ValidationError("Order instance is required")
+
+        if not self.partial:
+            missing_fields = [
+                field
+                for field in ["branch_id", "order_type"]
+                if field not in attrs
+            ]
+            if missing_fields:
+                raise serializers.ValidationError(
+                    {
+                        field: "This field is required."
+                        for field in missing_fields
+                    }
+                )
+
+        effective_order_type = attrs.get("order_type", order.order_type)
+        effective_customer_id = attrs.get("customer_id", order.customer_id)
+        effective_delivery_company_id = attrs.get(
+            "delivery_company_id",
+            order.delivery_company_id,
+        )
+
+        if effective_order_type == Order.OrderType.DELIVERY:
+            if not effective_customer_id:
+                raise serializers.ValidationError(
+                    {"customer_id": "This field is required for delivery orders."}
+                )
+            if not effective_delivery_company_id:
+                raise serializers.ValidationError(
+                    {
+                        "delivery_company_id": "This field is required for delivery orders."
+                    }
+                )
+
+        if "customer_id" in attrs:
+            customer_id = attrs.get("customer_id")
+            if customer_id is None:
+                attrs["customer"] = None
+            else:
+                try:
+                    attrs["customer"] = Customer.objects.get(id=customer_id)
+                except Customer.DoesNotExist:
+                    raise serializers.ValidationError("Invalid customer_id")
+
+        if "delivery_company_id" in attrs:
+            delivery_company_id = attrs.get("delivery_company_id")
+            if delivery_company_id is None:
+                attrs["delivery_company"] = None
+            else:
+                try:
+                    attrs["delivery_company"] = DeliveryCompany.objects.get(
+                        id=delivery_company_id
+                    )
+                except DeliveryCompany.DoesNotExist:
+                    raise serializers.ValidationError("Invalid delivery_company_id")
+
+        if "branch_id" in attrs:
+            try:
+                attrs["branch"] = Branch.objects.get(
+                    id=attrs["branch_id"],
+                    is_active=True,
+                )
+            except Branch.DoesNotExist:
+                raise serializers.ValidationError("Invalid branch_id")
+
+        branch = attrs.get("branch", order.branch)
+
+        if "items" in attrs:
+            if not attrs["items"]:
+                raise serializers.ValidationError("Order must have at least one item")
+
+            for item in attrs["items"]:
+                if not MenuItem.objects.filter(id=item["menu_item_id"]).exists():
+                    raise serializers.ValidationError(
+                        f"Invalid menu_item_id: {item['menu_item_id']}"
+                    )
+
+                if not MenuItem.objects.filter(
+                    id=item["menu_item_id"], branches=branch
+                ).exists():
+                    raise serializers.ValidationError(
+                        f"menu_item_id {item['menu_item_id']} is not available for this branch"
+                    )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        for input_field in [
+            "customer_id",
+            "delivery_company_id",
+            "branch_id",
+        ]:
+            validated_data.pop(input_field, None)
+
+        for field in [
+            "customer",
+            "branch",
+            "delivery_company",
+            "order_type",
+            "status",
+            "note",
+        ]:
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
+
+        items = validated_data.pop("items", None)
+
+        instance.save()
+
+        if items is not None:
+            replace_order_items(
+                order=instance,
+                items_data=OrderInputSerializer()._build_items_data(
+                    {"items": items}
+                ),
+            )
+
+        return instance
+
+
 class OrderOutputSerializer(serializers.ModelSerializer):
-    customer = CustomerOutputSerializer()
-    branch = BranchSerializer(allow_null=True)
+    customer = CustomerOutputSerializer(allow_null=True)
+    branch = BranchSerializer()
     delivery_company = DeliveryCompanyOutputSerializer(allow_null=True)
+    order_type_label_ar = serializers.CharField(source="get_order_type_display")
     items = OrderItemOutputSerializer(many=True)
 
     class Meta:
         model = Order
         fields = [
-            'id',
-            'customer',
-            'branch',
-            'delivery_company',
-            'status',
-            'note',
-            'created_at',
-            'items',
-            'total_price',
-            'updated_at'
+            "id",
+            "customer",
+            "branch",
+            "delivery_company",
+            "status",
+            "order_type",
+            "order_type_label_ar",
+            "note",
+            "created_at",
+            "items",
+            "total_price",
+            "updated_at",
         ]
 
 
@@ -244,24 +436,15 @@ class PaginatedOrderOutputSerializer(serializers.Serializer):
 
 class TodayOrderSummarySerializer(serializers.Serializer):
     total_orders = serializers.IntegerField()
-    total_revenue = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2
-    )
+    total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_existing_customers_ordered = serializers.IntegerField()
     total_new_customers_ordered = serializers.IntegerField()
-    orders_by_status = serializers.DictField(
-        child=serializers.IntegerField()
-    )
+    orders_by_status = serializers.DictField(child=serializers.IntegerField())
 
 
 class OrderStatusUpdateSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(
-        choices=Order.OrderStatus.choices
-    )
-    delivery_company_id = serializers.IntegerField(
-        required=False
-    )
+    status = serializers.ChoiceField(choices=Order.OrderStatus.choices)
+    delivery_company_id = serializers.IntegerField(required=False)
 
     def validate_delivery_company_id(self, value):
         try:
@@ -274,22 +457,21 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
 
 
 class OrderLogOutputSerializer(serializers.ModelSerializer):
-    order_id = serializers.UUIDField(source='order.id')
-    customer = CustomerOutputSerializer()
+    order_id = serializers.UUIDField(source="order.id")
+    customer = CustomerOutputSerializer(allow_null=True)
     created_by_username = serializers.CharField(
-        source='created_by.username',
-        allow_null=True
+        source="created_by.username", allow_null=True
     )
 
     class Meta:
         model = OrderLog
         fields = [
-            'id',
-            'order_id',
-            'customer',
-            'event_type',
-            'previous_status',
-            'new_status',
-            'created_by_username',
-            'created_at',
+            "id",
+            "order_id",
+            "customer",
+            "event_type",
+            "previous_status",
+            "new_status",
+            "created_by_username",
+            "created_at",
         ]

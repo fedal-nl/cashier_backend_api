@@ -8,12 +8,12 @@ class MenuItemAdminForm(forms.ModelForm):
     branches = forms.ModelMultipleChoiceField(
         queryset=Branch.objects.all(),
         required=False,
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
     )
 
     class Meta:
         model = MenuItem
-        fields = '__all__'
+        fields = "__all__"
 
 
 class MenuItemAdmin(admin.ModelAdmin):
@@ -23,9 +23,8 @@ class MenuItemAdmin(admin.ModelAdmin):
         super().save_related(request, form, formsets, change)
 
         if not form.cleaned_data.get("branches"):
-            form.instance.branches.set(
-                Branch.objects.all()
-            )
+            form.instance.branches.set(Branch.objects.all())
+
 
 # Register your models here.
 admin.site.register(Branch)

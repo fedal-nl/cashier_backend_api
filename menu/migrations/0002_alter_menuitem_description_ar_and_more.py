@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('menu', '0001_initial'),
+        ("menu", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='menuitem',
-            name='description_ar',
-            field=models.TextField(blank=True, default='', null=True),
+            model_name="menuitem",
+            name="description_ar",
+            field=models.TextField(blank=True, default="", null=True),
         ),
         migrations.AlterField(
-            model_name='menuitem',
-            name='description_en',
-            field=models.TextField(blank=True, default='', null=True),
+            model_name="menuitem",
+            name="description_en",
+            field=models.TextField(blank=True, default="", null=True),
         ),
     ]
