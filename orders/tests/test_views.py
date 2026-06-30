@@ -439,7 +439,7 @@ class CustomerAPITest(TestCase):
 
         self.assertEqual(customer.address, "")
 
-    def test_update_customer_rejects_duplicate_email(self):
+    def test_update_customer_allows_duplicate_email(self):
         Customer.objects.create(name="Ali", email="ali@test.com")
 
         customer = Customer.objects.create(name="Omar", email="omar@test.com")
@@ -450,9 +450,10 @@ class CustomerAPITest(TestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
 
-        self.assertIn("email", response.json())
+        customer.refresh_from_db()
+        self.assertEqual(customer.email, "ali@test.com")
 
     def test_update_customer_not_found(self):
         response = self.client.patch(

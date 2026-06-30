@@ -32,11 +32,20 @@ class CustomerModelTest(TestCase):
         self.assertEqual(customer.name, "Omar")
         self.assertEqual(str(customer), "Omar - omar@test.com")
 
-    def test_unique_email(self):
-        Customer.objects.create(name="User1", email="test@test.com")
+    def test_email_and_phone_number_can_be_reused(self):
+        Customer.objects.create(
+            name="User1",
+            email="test@test.com",
+            phone_number="123456",
+        )
+        customer = Customer.objects.create(
+            name="User2",
+            email="test@test.com",
+            phone_number="123456",
+        )
 
-        with self.assertRaises(Exception):
-            Customer.objects.create(name="User2", email="test@test.com")
+        self.assertEqual(customer.email, "test@test.com")
+        self.assertEqual(customer.phone_number, "123456")
 
 
 class DeliveryCompanyModelTest(TestCase):

@@ -129,6 +129,48 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
         }
 
 
+def build_order_items_data(items: list[dict]) -> list[dict]:
+    items_data = []
+    for item in items:
+        try:
+            menu_item = MenuItem.objects.get(id=item["menu_item_id"])
+        except MenuItem.DoesNotExist:
+            raise serializers.ValidationError(
+                f"Invalid menu_item_id: {item['menu_item_id']}"
+            )
+
+        modifications_data = []
+        for mod in item.get("modifications", []):
+            try:
+                ingredient = Ingredient.objects.get(id=mod["ingredient_id"])
+            except Ingredient.DoesNotExist:
+                raise serializers.ValidationError(
+                    f"Invalid ingredient_id: {mod['ingredient_id']}"
+                )
+
+            modifications_data.append(
+                {
+                    "ingredient": ingredient,
+                    "name_ar": mod["name_ar"],
+                    "type": mod["type"],
+                    "quantity": mod.get("quantity", 1),
+                }
+            )
+
+        items_data.append(
+            {
+                "menu_item": menu_item,
+                "name_ar": menu_item.name_ar,
+                "base_price": menu_item.price,
+                "quantity": item["quantity"],
+                "order_item_note": item.get("note", ""),
+                "modifications": modifications_data,
+            }
+        )
+
+    return items_data
+
+
 class OrderInputSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField(required=False, allow_null=True)
     branch_id = serializers.IntegerField()
@@ -199,50 +241,9 @@ class OrderInputSerializer(serializers.Serializer):
 
         return attrs
 
-    def _build_items_data(self, validated_data: dict) -> list[dict]:
-        items_data = []
-        for item in validated_data["items"]:
-            try:
-                menu_item = MenuItem.objects.get(id=item["menu_item_id"])
-            except MenuItem.DoesNotExist:
-                raise serializers.ValidationError(
-                    f"Invalid menu_item_id: {item['menu_item_id']}"
-                )
-
-            modifications_data = []
-            for mod in item.get("modifications", []):
-                try:
-                    ingredient = Ingredient.objects.get(id=mod["ingredient_id"])
-                except Ingredient.DoesNotExist:
-                    raise serializers.ValidationError(
-                        f"Invalid ingredient_id: {mod['ingredient_id']}"
-                    )
-
-                modifications_data.append(
-                    {
-                        "ingredient": ingredient,
-                        "name_ar": mod["name_ar"],
-                        "type": mod["type"],
-                        "quantity": mod.get("quantity", 1),
-                    }
-                )
-
-            items_data.append(
-                {
-                    "menu_item": menu_item,
-                    "name_ar": menu_item.name_ar,
-                    "base_price": menu_item.price,
-                    "quantity": item["quantity"],
-                    "order_item_note": item.get("note", ""),
-                    "modifications": modifications_data,
-                }
-            )
-
-        return items_data
-
     def create(self, validated_data: dict) -> Order:
         user = validated_data.pop("user", None)
-        items_data = self._build_items_data(validated_data)
+        items_data = build_order_items_data(validated_data["items"])
 
         order = create_order(
             customer=validated_data["customer"],
@@ -394,9 +395,7 @@ class OrderUpdateSerializer(serializers.Serializer):
         if items is not None:
             replace_order_items(
                 order=instance,
-                items_data=OrderInputSerializer()._build_items_data(
-                    {"items": items}
-                ),
+                items_data=build_order_items_data(items),
             )
 
         return instance
