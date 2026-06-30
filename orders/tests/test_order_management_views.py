@@ -27,6 +27,50 @@ class OrderManagementViewTests(TestCase):
             status=Order.OrderStatus.CREATED,
         )
 
+    def test_list_customers_search_filters_before_pagination(self):
+        for index in range(12):
+            Customer.objects.create(
+                name=f"Customer {index}",
+                email=f"customer-{index}@test.com",
+                phone_number=f"07700000{index:02d}",
+            )
+
+        target = Customer.objects.create(
+            name="Zainab Search",
+            email="zainab-search@test.com",
+            phone_number="07999999123",
+        )
+
+        response = self.client.get(
+            "/api/orders/customers/list/?page_size=5&search=07999999123"
+        )
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["results"][0]["id"], target.id)
+
+    def test_list_customers_search_ignores_email_and_address(self):
+        Customer.objects.create(
+            name="Email Only",
+            email="email-only@test.com",
+            phone_number="07711111111",
+            address="Hidden Street",
+        )
+
+        email_response = self.client.get(
+            "/api/orders/customers/list/?search=email-only"
+        )
+        address_response = self.client.get(
+            "/api/orders/customers/list/?search=Hidden"
+        )
+
+        self.assertEqual(email_response.status_code, 200)
+        self.assertEqual(address_response.status_code, 200)
+        self.assertEqual(email_response.json()["count"], 0)
+        self.assertEqual(address_response.json()["count"], 0)
+
     def test_list_orders(self):
         response = self.client.get("/api/orders/list/")
 

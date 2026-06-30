@@ -87,12 +87,28 @@ PAGINATION_PARAMETERS = [
 
 
 @extend_schema(
-    parameters=PAGINATION_PARAMETERS,
+    parameters=[
+        *PAGINATION_PARAMETERS,
+        OpenApiParameter(
+            name="search",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Search customers by name or phone number.",
+        ),
+    ],
     responses={200: PaginatedCustomerOutputSerializer},
 )
 class CustomerListView(APIView):
     def get(self, request):
         customers = Customer.objects.all()
+        search = request.query_params.get("search", "").strip()
+
+        if search:
+            customers = customers.filter(
+                Q(name__icontains=search)
+                | Q(phone_number__icontains=search)
+            )
+
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(customers, request, view=self)
 

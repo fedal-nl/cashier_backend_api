@@ -16,10 +16,10 @@ if TYPE_CHECKING:  # pragma: no cover
 class Customer(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(
-        unique=True, blank=True, null=True, verbose_name="البريد الإلكتروني"
+        blank=True, null=True, verbose_name="البريد الإلكتروني"
     )
     phone_number = models.CharField(
-        max_length=20, blank=True, null=True, unique=True, verbose_name="رقم الهاتف"
+        max_length=20, blank=True, null=True, verbose_name="رقم الهاتف"
     )
     address = models.TextField(blank=True, null=True, verbose_name="العنوان")
     created_at = models.DateTimeField(auto_now_add=True)
