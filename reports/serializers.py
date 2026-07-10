@@ -27,6 +27,8 @@ class DailyReportQuerySerializer(serializers.Serializer):
 
 class DailyReportResponseSerializer(serializers.Serializer):
     date = serializers.DateField()
+    branch_id = serializers.IntegerField()
+    branch_name = serializers.CharField()
     total_orders = serializers.IntegerField()
     orders_by_status = serializers.DictField(child=serializers.IntegerField())
     total_existing_customers_ordered = serializers.IntegerField()

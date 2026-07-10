@@ -286,16 +286,11 @@ class OrderUpdateSerializer(serializers.Serializer):
 
         if not self.partial:
             missing_fields = [
-                field
-                for field in ["branch_id", "order_type"]
-                if field not in attrs
+                field for field in ["branch_id", "order_type"] if field not in attrs
             ]
             if missing_fields:
                 raise serializers.ValidationError(
-                    {
-                        field: "This field is required."
-                        for field in missing_fields
-                    }
+                    {field: "This field is required." for field in missing_fields}
                 )
 
         effective_order_type = attrs.get("order_type", order.order_type)
@@ -434,6 +429,8 @@ class PaginatedOrderOutputSerializer(serializers.Serializer):
 
 
 class TodayOrderSummarySerializer(serializers.Serializer):
+    branch_id = serializers.IntegerField()
+    branch_name = serializers.CharField()
     total_orders = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_existing_customers_ordered = serializers.IntegerField()

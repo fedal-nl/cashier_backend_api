@@ -79,11 +79,15 @@ class DailyReportViewTests(TestCase):
 
         data = response.json()
 
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data), 9)
 
-        first_day = data[0]
+        first_day = self._find_report_row(
+            data, date="2026-06-01", branch=self.default_branch
+        )
 
         self.assertEqual(first_day["date"], "2026-06-01")
+        self.assertEqual(first_day["branch_id"], self.default_branch.id)
+        self.assertEqual(first_day["branch_name"], "Default Branch")
         self.assertEqual(first_day["total_orders"], 3)
         self.assertEqual(first_day["orders_by_status"]["created"], 2)
         self.assertEqual(first_day["orders_by_status"]["completed"], 1)
@@ -92,7 +96,9 @@ class DailyReportViewTests(TestCase):
         self.assertEqual(first_day["total_existing_customers_ordered"], 1)
         self.assertEqual(first_day["total_revenue"], "35.00")
 
-        second_day = data[1]
+        second_day = self._find_report_row(
+            data, date="2026-06-02", branch=self.default_branch
+        )
 
         self.assertEqual(second_day["date"], "2026-06-02")
         self.assertEqual(second_day["total_orders"], 2)
@@ -102,12 +108,16 @@ class DailyReportViewTests(TestCase):
         self.assertEqual(second_day["total_existing_customers_ordered"], 1)
         self.assertEqual(second_day["total_revenue"], "22.00")
 
-        empty_day = data[2]
+        empty_day = self._find_report_row(
+            data, date="2026-06-03", branch=self.default_branch
+        )
 
         self.assertEqual(
             empty_day,
             {
                 "date": "2026-06-03",
+                "branch_id": self.default_branch.id,
+                "branch_name": "Default Branch",
                 "total_orders": 0,
                 "orders_by_status": {
                     "created": 0,
@@ -179,6 +189,9 @@ class DailyReportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["branch_id"], self.main_branch.id)
+        self.assertEqual(data[0]["branch_name"], "Main Branch")
         self.assertEqual(data[0]["total_orders"], 1)
 
         self.assertEqual(data[0]["total_revenue"], "15.00")
@@ -192,11 +205,15 @@ class DailyReportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(data[0]["total_orders"], 1)
+        default_branch_report = self._find_report_row(
+            data, date="2026-06-01", branch=self.default_branch
+        )
 
-        self.assertEqual(data[0]["orders_by_status"]["completed"], 1)
+        self.assertEqual(default_branch_report["total_orders"], 1)
 
-        self.assertEqual(data[0]["orders_by_status"]["created"], 0)
+        self.assertEqual(default_branch_report["orders_by_status"]["completed"], 1)
+
+        self.assertEqual(default_branch_report["orders_by_status"]["created"], 0)
 
     def test_daily_report_rejects_invalid_branch(self):
         response = self.client.get(
@@ -218,3 +235,10 @@ class DailyReportViewTests(TestCase):
         order.refresh_from_db()
 
         return order
+
+    def _find_report_row(self, rows, *, date, branch):
+        return next(
+            row
+            for row in rows
+            if row["date"] == date and row["branch_id"] == branch.id
+        )

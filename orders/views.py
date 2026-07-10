@@ -29,6 +29,8 @@ from .serializers import (
     PaginatedOrderOutputSerializer,
     TodayOrderSummarySerializer,
 )
+from menu.models import Branch
+
 from .models import Customer, DeliveryCompany, Order, OrderLog
 from .pagination import StandardResultsSetPagination
 from .services import update_order_status
@@ -105,8 +107,7 @@ class CustomerListView(APIView):
 
         if search:
             customers = customers.filter(
-                Q(name__icontains=search)
-                | Q(phone_number__icontains=search)
+                Q(name__icontains=search) | Q(phone_number__icontains=search)
             )
 
         paginator = StandardResultsSetPagination()
@@ -175,7 +176,7 @@ class DeliveryCompanyListView(APIView):
             value={"value": "dine_in", "label_ar": "داخل المطعم"},
             response_only=True,
             status_codes=["200"],
-        )
+        ),
     ],
 )
 class OrderTypeListView(APIView):
@@ -271,28 +272,44 @@ class OrderListView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-@extend_schema(responses={200: TodayOrderSummarySerializer})
+@extend_schema(responses={200: TodayOrderSummarySerializer(many=True)})
 class TodayOrderSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Return today's order, revenue, status, and customer summary totals."""
+        """Return today's order, revenue, status, and customer totals by branch."""
         today = timezone.localdate()
         queryset = Order.objects.filter(created_at__date=today)
 
-        totals = queryset.aggregate(
-            total_orders=Count("id"), total_revenue=Sum("total_price")
+        summaries = [
+            self._build_branch_summary(branch=branch, queryset=queryset, today=today)
+            for branch in Branch.objects.filter(is_active=True)
+        ]
+
+        serializer = TodayOrderSummarySerializer(summaries, many=True)
+
+        return Response(serializer.data)
+
+    def _build_branch_summary(self, *, branch, queryset, today):
+        branch_queryset = queryset.filter(branch=branch)
+
+        totals = branch_queryset.aggregate(
+            total_orders=Count("id"),
+            total_revenue=Sum(
+                "total_price",
+                filter=~Q(status=Order.OrderStatus.CANCELLED),
+            ),
         )
 
         orders_by_status = {
             status_value: 0 for status_value, _ in Order.OrderStatus.choices
         }
 
-        for row in queryset.values("status").annotate(total=Count("id")):
+        for row in branch_queryset.values("status").annotate(total=Count("id")):
             orders_by_status[row["status"]] = row["total"]
 
         customer_ids = set(
-            queryset.exclude(customer_id__isnull=True)
+            branch_queryset.exclude(customer_id__isnull=True)
             .values_list("customer_id", flat=True)
             .distinct()
         )
@@ -307,19 +324,15 @@ class TodayOrderSummaryView(APIView):
 
         total_revenue = totals["total_revenue"] or Decimal("0")
 
-        serializer = TodayOrderSummarySerializer(
-            {
-                "total_orders": totals["total_orders"],
-                "total_revenue": total_revenue,
-                "total_existing_customers_ordered": len(existing_customer_ids),
-                "total_new_customers_ordered": len(
-                    customer_ids - existing_customer_ids
-                ),
-                "orders_by_status": orders_by_status,
-            }
-        )
-
-        return Response(serializer.data)
+        return {
+            "branch_id": branch.id,
+            "branch_name": branch.name,
+            "total_orders": totals["total_orders"],
+            "total_revenue": total_revenue,
+            "total_existing_customers_ordered": len(existing_customer_ids),
+            "total_new_customers_ordered": len(customer_ids - existing_customer_ids),
+            "orders_by_status": orders_by_status,
+        }
 
 
 @extend_schema_view(

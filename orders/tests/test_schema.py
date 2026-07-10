@@ -32,17 +32,11 @@ class OrderSchemaTests(TestCase):
 
         self.assertEqual(operation["summary"], "List order types")
         self.assertIn("Arabic labels", operation["description"])
-        self.assertIn(
-            "application/json",
-            operation["responses"]["200"]["content"]
-        )
+        self.assertIn("application/json", operation["responses"]["200"]["content"])
 
-        examples = operation["responses"]["200"]["content"][
-            "application/json"
-        ]["examples"]
+        examples = operation["responses"]["200"]["content"]["application/json"][
+            "examples"
+        ]
 
         self.assertIn("DeliveryOrderType", examples)
-        self.assertEqual(
-            examples["DeliveryOrderType"]["value"][0]["value"],
-            "delivery"
-        )
+        self.assertEqual(examples["DeliveryOrderType"]["value"][0]["value"], "delivery")

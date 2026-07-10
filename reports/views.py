@@ -39,8 +39,6 @@ class DailyReportView(APIView):
         date_from = validated_data["date_from"]
         date_to = validated_data["date_to"]
 
-        rows_by_day = self._empty_rows_by_day(date_from=date_from, date_to=date_to)
-
         orders = Order.objects.filter(
             created_at__date__gte=date_from, created_at__date__lte=date_to
         )
@@ -49,32 +47,44 @@ class DailyReportView(APIView):
         report_status = validated_data.get("status")
 
         if isinstance(branch, Branch):
+            branches = [branch]
             orders = orders.filter(branch=branch)
+        else:
+            branches = list(Branch.objects.filter(is_active=True))
+            orders = orders.filter(branch__in=branches)
 
         if report_status:
             orders = orders.filter(status=report_status)
 
-        self._add_order_totals(rows_by_day=rows_by_day, orders=orders)
-        self._add_status_totals(rows_by_day=rows_by_day, orders=orders)
-        self._add_customer_totals(rows_by_day=rows_by_day, orders=orders)
+        rows_by_branch_day = self._empty_rows_by_branch_day(
+            date_from=date_from, date_to=date_to, branches=branches
+        )
 
-        return Response(list(rows_by_day.values()), status=status.HTTP_200_OK)
+        self._add_order_totals(rows_by_day=rows_by_branch_day, orders=orders)
+        self._add_status_totals(rows_by_day=rows_by_branch_day, orders=orders)
+        self._add_customer_totals(rows_by_day=rows_by_branch_day, orders=orders)
 
-    def _empty_rows_by_day(self, *, date_from, date_to):
+        return Response(list(rows_by_branch_day.values()), status=status.HTTP_200_OK)
+
+    def _empty_rows_by_branch_day(self, *, date_from, date_to, branches):
         rows_by_day = {}
         current_date = date_from
 
         while current_date <= date_to:
-            rows_by_day[current_date] = {
-                "date": current_date.isoformat(),
-                "total_orders": 0,
-                "orders_by_status": {
-                    status_value: 0 for status_value, _ in Order.OrderStatus.choices
-                },
-                "total_existing_customers_ordered": 0,
-                "total_new_customers_ordered": 0,
-                "total_revenue": "0.00",
-            }
+            for branch in branches:
+                rows_by_day[(current_date, branch.id)] = {
+                    "date": current_date.isoformat(),
+                    "branch_id": branch.id,
+                    "branch_name": branch.name,
+                    "total_orders": 0,
+                    "orders_by_status": {
+                        status_value: 0
+                        for status_value, _ in Order.OrderStatus.choices
+                    },
+                    "total_existing_customers_ordered": 0,
+                    "total_new_customers_ordered": 0,
+                    "total_revenue": "0.00",
+                }
             current_date += timedelta(days=1)
 
         return rows_by_day
@@ -82,31 +92,31 @@ class DailyReportView(APIView):
     def _add_order_totals(self, *, rows_by_day, orders):
         daily_totals = (
             orders.annotate(day=TruncDate("created_at"))
-            .values("day")
+            .values("day", "branch_id")
             .annotate(total_orders=Count("id"), total_revenue=Sum("total_price"))
         )
 
         for daily_total in daily_totals:
-            row = rows_by_day[daily_total["day"]]
+            row = rows_by_day[(daily_total["day"], daily_total["branch_id"])]
             row["total_orders"] = daily_total["total_orders"]
             row["total_revenue"] = self._format_revenue(daily_total["total_revenue"])
 
     def _add_status_totals(self, *, rows_by_day, orders):
         daily_status_totals = (
             orders.annotate(day=TruncDate("created_at"))
-            .values("day", "status")
+            .values("day", "branch_id", "status")
             .annotate(total=Count("id"))
         )
 
         for status_total in daily_status_totals:
-            rows_by_day[status_total["day"]]["orders_by_status"][
-                status_total["status"]
-            ] = status_total["total"]
+            rows_by_day[(status_total["day"], status_total["branch_id"])][
+                "orders_by_status"
+            ][status_total["status"]] = status_total["total"]
 
     def _add_customer_totals(self, *, rows_by_day, orders):
-        for day, row in rows_by_day.items():
+        for (day, branch_id), row in rows_by_day.items():
             customer_ids = set(
-                orders.filter(created_at__date=day)
+                orders.filter(created_at__date=day, branch_id=branch_id)
                 .values_list("customer_id", flat=True)
                 .distinct()
             )
