@@ -62,9 +62,7 @@ class OrderManagementViewTests(TestCase):
         email_response = self.client.get(
             "/api/orders/customers/list/?search=email-only"
         )
-        address_response = self.client.get(
-            "/api/orders/customers/list/?search=Hidden"
-        )
+        address_response = self.client.get("/api/orders/customers/list/?search=Hidden")
 
         self.assertEqual(email_response.status_code, 200)
         self.assertEqual(address_response.status_code, 200)
@@ -116,6 +114,8 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(len(data["results"]), 2)
 
     def test_today_order_summary_returns_count_revenue_and_status_totals(self):
+        second_branch = Branch.objects.create(name="Second Branch")
+
         Order.objects.create(
             customer=self.customer,
             branch=self.branch,
@@ -131,6 +131,20 @@ class OrderManagementViewTests(TestCase):
             branch=self.branch,
             total_price=10,
             status=Order.OrderStatus.PAID,
+        )
+
+        Order.objects.create(
+            customer=new_customer,
+            branch=self.branch,
+            total_price=900,
+            status=Order.OrderStatus.CANCELLED,
+        )
+
+        Order.objects.create(
+            customer=new_customer,
+            branch=second_branch,
+            total_price=35,
+            status=Order.OrderStatus.DELIVERED,
         )
 
         old_order = Order.objects.create(
@@ -149,19 +163,40 @@ class OrderManagementViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(data["total_orders"], 3)
+        self.assertEqual(len(data), 2)
 
-        self.assertEqual(data["total_revenue"], "10035.50")
+        main_branch_summary = data[0]
+        second_branch_summary = data[1]
 
-        self.assertEqual(data["total_existing_customers_ordered"], 1)
+        self.assertEqual(main_branch_summary["branch_id"], self.branch.id)
 
-        self.assertEqual(data["total_new_customers_ordered"], 1)
+        self.assertEqual(main_branch_summary["branch_name"], "Main Branch")
 
-        self.assertEqual(data["orders_by_status"]["created"], 1)
+        self.assertEqual(main_branch_summary["total_orders"], 4)
 
-        self.assertEqual(data["orders_by_status"]["completed"], 1)
+        self.assertEqual(main_branch_summary["total_revenue"], "10035.50")
 
-        self.assertEqual(data["orders_by_status"]["delivered"], 0)
+        self.assertEqual(main_branch_summary["total_existing_customers_ordered"], 1)
+
+        self.assertEqual(main_branch_summary["total_new_customers_ordered"], 1)
+
+        self.assertEqual(main_branch_summary["orders_by_status"]["created"], 1)
+
+        self.assertEqual(main_branch_summary["orders_by_status"]["completed"], 1)
+
+        self.assertEqual(main_branch_summary["orders_by_status"]["cancelled"], 1)
+
+        self.assertEqual(main_branch_summary["orders_by_status"]["delivered"], 0)
+
+        self.assertEqual(second_branch_summary["branch_id"], second_branch.id)
+
+        self.assertEqual(second_branch_summary["branch_name"], "Second Branch")
+
+        self.assertEqual(second_branch_summary["total_orders"], 1)
+
+        self.assertEqual(second_branch_summary["total_revenue"], "35.00")
+
+        self.assertEqual(second_branch_summary["orders_by_status"]["delivered"], 1)
 
     def test_get_single_order(self):
         response = self.client.get(f"/api/orders/{self.order.id}/")

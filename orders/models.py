@@ -15,9 +15,7 @@ if TYPE_CHECKING:  # pragma: no cover
 # This will allow us to manage customers independently and reuse the customer model in other parts of the system if needed.
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(
-        blank=True, null=True, verbose_name="البريد الإلكتروني"
-    )
+    email = models.EmailField(blank=True, null=True, verbose_name="البريد الإلكتروني")
     phone_number = models.CharField(
         max_length=20, blank=True, null=True, verbose_name="رقم الهاتف"
     )
