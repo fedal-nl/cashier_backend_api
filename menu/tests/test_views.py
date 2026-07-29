@@ -53,3 +53,19 @@ class MenuBranchViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
         self.assertIn("branch_id", response.json())
+
+    def test_menu_orders_categories_by_frontend_ranking_then_name(self):
+        self.category.frontend_ranking = 2
+        self.category.save(update_fields=["frontend_ranking"])
+        Category.objects.create(name_ar="Zulu", frontend_ranking=1)
+        Category.objects.create(name_ar="Alpha", frontend_ranking=1)
+        Category.objects.create(name_ar="First", frontend_ranking=0)
+
+        response = self.client.get("/api/menu/menus/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [category["name_ar"] for category in response.json()],
+            ["First", "Alpha", "Zulu", "طعام"],
+        )
+        self.assertIn("frontend_ranking", response.json()[0])

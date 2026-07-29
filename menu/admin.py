@@ -26,9 +26,15 @@ class MenuItemAdmin(admin.ModelAdmin):
             form.instance.branches.set(Branch.objects.all())
 
 
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name_ar", "admin_ranking", "frontend_ranking", "is_active")
+    list_editable = ("admin_ranking", "frontend_ranking", "is_active")
+    ordering = ("admin_ranking", "name_ar", "id")
+
+
 # Register your models here.
 admin.site.register(Branch)
-admin.site.register(Category)
 admin.site.register(Unit)
 admin.site.register(MenuItem, MenuItemAdmin)
 admin.site.register(Ingredient)

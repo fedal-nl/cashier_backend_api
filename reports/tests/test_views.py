@@ -238,7 +238,5 @@ class DailyReportViewTests(TestCase):
 
     def _find_report_row(self, rows, *, date, branch):
         return next(
-            row
-            for row in rows
-            if row["date"] == date and row["branch_id"] == branch.id
+            row for row in rows if row["date"] == date and row["branch_id"] == branch.id
         )
