@@ -82,7 +82,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", "name_ar", "items"]
+        fields = ["id", "name_ar", "frontend_ranking", "items"]
 
     @extend_schema_field(MenuItemSerializer(many=True))
     def get_items(self, obj):

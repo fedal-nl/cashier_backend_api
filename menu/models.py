@@ -9,12 +9,13 @@ from decimal import Decimal
 class Category(models.Model):
     name_ar = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    admin_ranking = models.PositiveIntegerField(default=0)
+    frontend_ranking = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
-    # make the default ordering by id
     class Meta:
-        ordering = ["id"]
+        ordering = ["frontend_ranking", "name_ar", "id"]
         verbose_name_plural = "Categories"
 
     def __str__(self):

@@ -21,11 +21,15 @@ class BranchListView(ListAPIView):
 
 
 class MenuListView(ListAPIView):
-    queryset = Category.objects.prefetch_related(
-        "items__branches",
-        "items__ingredients__ingredient",
-        "items__ingredients__ingredient__unit",
-    ).filter(is_active=True)
+    queryset = (
+        Category.objects.prefetch_related(
+            "items__branches",
+            "items__ingredients__ingredient",
+            "items__ingredients__ingredient__unit",
+        )
+        .filter(is_active=True)
+        .order_by("frontend_ranking", "name_ar", "id")
+    )
     serializer_class = CategorySerializer
 
     def list(self, request, *args, **kwargs):
@@ -50,7 +54,9 @@ class MenuListView(ListAPIView):
 
 
 class CategoryListView(ListAPIView):
-    queryset = Category.objects.filter(is_active=True)
+    queryset = Category.objects.filter(is_active=True).order_by(
+        "frontend_ranking", "name_ar", "id"
+    )
     serializer_class = CategorySerializer
 
 

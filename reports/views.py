@@ -78,8 +78,7 @@ class DailyReportView(APIView):
                     "branch_name": branch.name,
                     "total_orders": 0,
                     "orders_by_status": {
-                        status_value: 0
-                        for status_value, _ in Order.OrderStatus.choices
+                        status_value: 0 for status_value, _ in Order.OrderStatus.choices
                     },
                     "total_existing_customers_ordered": 0,
                     "total_new_customers_ordered": 0,

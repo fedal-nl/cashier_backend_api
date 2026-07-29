@@ -16,6 +16,8 @@ class CategoryModelTest(TestCase):
         category = Category.objects.create(name_ar="طعام")
         self.assertEqual(category.name_ar, "طعام")
         self.assertTrue(category.is_active)
+        self.assertEqual(category.admin_ranking, 0)
+        self.assertEqual(category.frontend_ranking, 0)
 
     def test_category_str(self):
         category = Category.objects.create(name_ar="مشروبات")
