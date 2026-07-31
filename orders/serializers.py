@@ -299,9 +299,16 @@ class OrderUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Order instance is required")
 
         cancellation_password = attrs.pop("cancellation_password", "")
+        request = self.context.get("request")
+        user_is_superuser = bool(
+            request
+            and request.user.is_authenticated
+            and request.user.is_superuser
+        )
         if (
             attrs.get("status") == Order.OrderStatus.CANCELLED
             and order.status != Order.OrderStatus.CANCELLED
+            and not user_is_superuser
         ):
             configured_password = settings.ORDER_CANCELLATION_PASSWORD
             if not configured_password:
@@ -507,7 +514,17 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
     def validate(self, attrs):
         cancellation_password = attrs.pop("cancellation_password", "")
 
-        if attrs["status"] == Order.OrderStatus.CANCELLED:
+        request = self.context.get("request")
+        user_is_superuser = bool(
+            request
+            and request.user.is_authenticated
+            and request.user.is_superuser
+        )
+
+        if (
+            attrs["status"] == Order.OrderStatus.CANCELLED
+            and not user_is_superuser
+        ):
             configured_password = settings.ORDER_CANCELLATION_PASSWORD
 
             if not configured_password:

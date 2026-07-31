@@ -15,3 +15,4 @@ class MeResponseSerializer(serializers.Serializer):
     username = serializers.CharField(required=False, allow_null=True)
     can_view_reports = serializers.BooleanField(required=False)
     can_view_order_logs = serializers.BooleanField(required=False)
+    can_cancel_without_password = serializers.BooleanField(required=False)
