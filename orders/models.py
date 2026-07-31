@@ -125,6 +125,7 @@ class OrderLog(models.Model):
     class EventType(models.TextChoices):
         CREATED = "created", "Created"
         STATUS_UPDATED = "status_updated", "Status updated"
+        MODIFIED = "modified", "Modified"
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="logs")
     customer = models.ForeignKey(
@@ -139,6 +140,7 @@ class OrderLog(models.Model):
         max_length=20, choices=Order.OrderStatus.choices, blank=True, null=True
     )
     new_status = models.CharField(max_length=20, choices=Order.OrderStatus.choices)
+    changes = models.JSONField(default=dict, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

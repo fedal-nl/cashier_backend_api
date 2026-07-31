@@ -1,3 +1,7 @@
+import secrets
+
+from django.conf import settings
+from django.db import transaction
 from rest_framework import serializers
 from .models import (
     Customer,
@@ -10,7 +14,12 @@ from .models import (
 from menu.models import Ingredient, MenuItem
 from menu.models import Branch
 from menu.serializers import BranchSerializer
-from .services import create_order, replace_order_items
+from .services import (
+    create_order,
+    create_order_log,
+    replace_order_items,
+    serialize_order_snapshot,
+)
 
 
 class OrderItemModificationInputSerializer(serializers.Serializer):
@@ -266,6 +275,11 @@ class OrderUpdateSerializer(serializers.Serializer):
         choices=Order.OrderStatus.choices,
         required=False,
     )
+    cancellation_password = serializers.CharField(
+        required=False,
+        write_only=True,
+        trim_whitespace=False,
+    )
     order_type = serializers.ChoiceField(
         choices=Order.OrderType.choices,
         required=False,
@@ -283,6 +297,28 @@ class OrderUpdateSerializer(serializers.Serializer):
 
         if order is None:
             raise serializers.ValidationError("Order instance is required")
+
+        cancellation_password = attrs.pop("cancellation_password", "")
+        if (
+            attrs.get("status") == Order.OrderStatus.CANCELLED
+            and order.status != Order.OrderStatus.CANCELLED
+        ):
+            configured_password = settings.ORDER_CANCELLATION_PASSWORD
+            if not configured_password:
+                raise serializers.ValidationError(
+                    {
+                        "cancellation_password": (
+                            "Order cancellation is not configured."
+                        )
+                    }
+                )
+            if not secrets.compare_digest(
+                cancellation_password,
+                configured_password,
+            ):
+                raise serializers.ValidationError(
+                    {"cancellation_password": "Invalid cancellation password."}
+                )
 
         if not self.partial:
             missing_fields = [
@@ -364,7 +400,11 @@ class OrderUpdateSerializer(serializers.Serializer):
 
         return attrs
 
+    @transaction.atomic
     def update(self, instance, validated_data):
+        user = validated_data.pop("user", None)
+        before = serialize_order_snapshot(instance)
+
         for input_field in [
             "customer_id",
             "delivery_company_id",
@@ -391,6 +431,17 @@ class OrderUpdateSerializer(serializers.Serializer):
             replace_order_items(
                 order=instance,
                 items_data=build_order_items_data(items),
+            )
+
+        after = serialize_order_snapshot(instance)
+        if before != after:
+            create_order_log(
+                order=instance,
+                event_type=OrderLog.EventType.MODIFIED,
+                previous_status=before["status"],
+                new_status=instance.status,
+                user=user,
+                changes={"before": before, "after": after},
             )
 
         return instance
@@ -441,6 +492,11 @@ class TodayOrderSummarySerializer(serializers.Serializer):
 class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Order.OrderStatus.choices)
     delivery_company_id = serializers.IntegerField(required=False)
+    cancellation_password = serializers.CharField(
+        required=False,
+        write_only=True,
+        trim_whitespace=False,
+    )
 
     def validate_delivery_company_id(self, value):
         try:
@@ -449,6 +505,28 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid delivery_company_id")
 
     def validate(self, attrs):
+        cancellation_password = attrs.pop("cancellation_password", "")
+
+        if attrs["status"] == Order.OrderStatus.CANCELLED:
+            configured_password = settings.ORDER_CANCELLATION_PASSWORD
+
+            if not configured_password:
+                raise serializers.ValidationError(
+                    {
+                        "cancellation_password": (
+                            "Order cancellation is not configured."
+                        )
+                    }
+                )
+
+            if not secrets.compare_digest(
+                cancellation_password,
+                configured_password,
+            ):
+                raise serializers.ValidationError(
+                    {"cancellation_password": "Invalid cancellation password."}
+                )
+
         return attrs
 
 
@@ -469,5 +547,7 @@ class OrderLogOutputSerializer(serializers.ModelSerializer):
             "previous_status",
             "new_status",
             "created_by_username",
+            "changes",
             "created_at",
+            "updated_at",
         ]

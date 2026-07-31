@@ -12,7 +12,12 @@ class DailyReportViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        self.user = User.objects.create_user(username="cashier", password="test1234")
+        self.user = User.objects.create_user(
+            username="cashier",
+            password="test1234",
+            is_staff=True,
+            is_superuser=True,
+        )
 
         self.client.login(username="cashier", password="test1234")
 
@@ -139,6 +144,32 @@ class DailyReportViewTests(TestCase):
         client = APIClient()
 
         response = client.get(
+            "/api/reports/daily/?date_from=2026-06-01&date_to=2026-06-03"
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_daily_report_rejects_authenticated_non_staff_user(self):
+        non_staff_user = User.objects.create_user(
+            username="limited-cashier", password="test1234"
+        )
+        self.client.force_login(non_staff_user)
+
+        response = self.client.get(
+            "/api/reports/daily/?date_from=2026-06-01&date_to=2026-06-03"
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_daily_report_rejects_staff_user_who_is_not_superuser(self):
+        staff_user = User.objects.create_user(
+            username="staff-member",
+            password="test1234",
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+
+        response = self.client.get(
             "/api/reports/daily/?date_from=2026-06-01&date_to=2026-06-03"
         )
 

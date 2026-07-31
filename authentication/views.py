@@ -51,6 +51,13 @@ class LogoutView(APIView):
 class MeView(APIView):
     def get(self, request):
         if request.user.is_authenticated:
-            return Response({"authenticated": True, "username": request.user.username})
+            return Response(
+                {
+                    "authenticated": True,
+                    "username": request.user.username,
+                    "can_view_reports": request.user.is_superuser,
+                    "can_view_order_logs": request.user.is_superuser,
+                }
+            )
 
         return Response({"authenticated": False})

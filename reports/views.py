@@ -6,7 +6,7 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,6 +14,11 @@ from menu.models import Branch
 from orders.models import Order
 
 from .serializers import DailyReportQuerySerializer, DailyReportResponseSerializer
+
+
+class IsSuperuser(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_superuser)
 
 
 class DailyReportValidatedData(TypedDict):
@@ -28,7 +33,7 @@ class DailyReportValidatedData(TypedDict):
     responses={200: DailyReportResponseSerializer(many=True)},
 )
 class DailyReportView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperuser]
 
     def get(self, request):
         serializer = DailyReportQuerySerializer(data=request.query_params)
