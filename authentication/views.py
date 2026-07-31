@@ -57,6 +57,7 @@ class MeView(APIView):
                     "username": request.user.username,
                     "can_view_reports": request.user.is_superuser,
                     "can_view_order_logs": request.user.is_superuser,
+                    "can_cancel_without_password": request.user.is_superuser,
                 }
             )
 

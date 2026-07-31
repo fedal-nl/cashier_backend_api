@@ -32,6 +32,15 @@ class OrderManagementViewTests(TestCase):
             status=Order.OrderStatus.CREATED,
         )
 
+    def login_as_non_superuser_staff(self):
+        staff_user = User.objects.create_user(
+            username="staff-member",
+            password="test1234",
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+        return staff_user
+
     def test_list_customers_search_filters_before_pagination(self):
         for index in range(12):
             Customer.objects.create(
@@ -388,6 +397,7 @@ class OrderManagementViewTests(TestCase):
 
     @override_settings(ORDER_CANCELLATION_PASSWORD="admin-cancel-secret")
     def test_cancelling_order_requires_correct_password(self):
+        self.login_as_non_superuser_staff()
         response = self.client.patch(
             f"/api/orders/{self.order.id}/status/",
             {
@@ -408,6 +418,7 @@ class OrderManagementViewTests(TestCase):
 
     @override_settings(ORDER_CANCELLATION_PASSWORD="admin-cancel-secret")
     def test_cancelling_order_with_correct_password_updates_status(self):
+        self.login_as_non_superuser_staff()
         response = self.client.patch(
             f"/api/orders/{self.order.id}/status/",
             {
@@ -423,6 +434,7 @@ class OrderManagementViewTests(TestCase):
 
     @override_settings(ORDER_CANCELLATION_PASSWORD="")
     def test_cancelling_order_is_rejected_when_password_is_not_configured(self):
+        self.login_as_non_superuser_staff()
         response = self.client.patch(
             f"/api/orders/{self.order.id}/status/",
             {
@@ -435,6 +447,18 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.OrderStatus.CREATED)
+
+    @override_settings(ORDER_CANCELLATION_PASSWORD="")
+    def test_superuser_can_cancel_without_password(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {"status": Order.OrderStatus.CANCELLED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.CANCELLED)
 
     def test_update_order_status_to_picked_up_sets_delivery_company(self):
         delivery_company = DeliveryCompany.objects.create(

@@ -367,6 +367,7 @@ class OrderDetailView(RetrieveUpdateAPIView):
             order,
             data=request.data,
             partial=partial,
+            context=self.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
         order = serializer.save(user=request.user)
@@ -388,7 +389,10 @@ class OrderStatusUpdateView(UpdateAPIView):
     def patch(self, request, *args, **kwargs):
         order = self.get_object()
 
-        serializer = self.get_serializer(data=request.data, context={"order": order})
+        serializer = self.get_serializer(
+            data=request.data,
+            context={**self.get_serializer_context(), "order": order},
+        )
 
         serializer.is_valid(raise_exception=True)
 
