@@ -11,6 +11,43 @@ from decimal import Decimal
 from .models import Order, OrderItem, OrderItemModification, OrderLog
 
 
+def serialize_order_snapshot(order) -> dict:
+    items = order.items.prefetch_related("modifications").all()
+
+    return {
+        "created_at": order.created_at.isoformat(),
+        "updated_at": order.updated_at.isoformat(),
+        "customer_id": order.customer_id,
+        "branch_id": order.branch_id,
+        "delivery_company_id": order.delivery_company_id,
+        "status": order.status,
+        "order_type": order.order_type,
+        "note": order.note or "",
+        "total_price": str(order.total_price),
+        "items": [
+            {
+                "menu_item_id": item.menu_item_id,
+                "name_ar": item.menu_item_name_ar,
+                "quantity": item.quantity,
+                "base_price": str(item.menu_item_base_price),
+                "total_price": str(item.total_price),
+                "note": item.order_item_note or "",
+                "modifications": [
+                    {
+                        "ingredient_id": modification.ingredient_id,
+                        "name_ar": modification.ingredient_name_ar,
+                        "type": modification.modification_type,
+                        "quantity": modification.quantity,
+                        "price": str(modification.ingredient_price),
+                    }
+                    for modification in item.modifications.all()
+                ],
+            }
+            for item in items
+        ],
+    }
+
+
 def replace_order_items(*, order, items_data) -> None:
     order.items.all().delete()
     total_order_price = Decimal("0.00")
@@ -101,12 +138,14 @@ def create_order(
         event_type=OrderLog.EventType.CREATED,
         new_status=order.status,
         user=user,
+        changes={"after": serialize_order_snapshot(order)},
     )
 
     return order
 
 
 def update_order_status(*, order, status, delivery_company=None, user=None) -> Order:
+    before = serialize_order_snapshot(order)
     previous_status = order.status
     order.status = status
 
@@ -121,13 +160,20 @@ def update_order_status(*, order, status, delivery_company=None, user=None) -> O
         previous_status=previous_status,
         new_status=order.status,
         user=user,
+        changes={"before": before, "after": serialize_order_snapshot(order)},
     )
 
     return order
 
 
 def create_order_log(
-    *, order, event_type, new_status, previous_status=None, user=None
+    *,
+    order,
+    event_type,
+    new_status,
+    previous_status=None,
+    user=None,
+    changes=None,
 ) -> OrderLog:
     if user is not None and not getattr(user, "is_authenticated", False):
         user = None
@@ -139,4 +185,5 @@ def create_order_log(
         previous_status=previous_status,
         new_status=new_status,
         created_by=user,
+        changes=changes or {},
     )

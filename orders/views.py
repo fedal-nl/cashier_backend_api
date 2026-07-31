@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import cast
+from uuid import UUID
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -32,10 +33,15 @@ from .serializers import (
 from menu.models import Branch
 
 from .models import Customer, DeliveryCompany, Order, OrderLog
-from .pagination import StandardResultsSetPagination
+from .pagination import OrderLogPagination, StandardResultsSetPagination
 from .services import update_order_status
 from rest_framework.generics import RetrieveUpdateAPIView, UpdateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
+
+
+class IsSuperuser(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_superuser)
 
 
 @extend_schema(request=OrderInputSerializer, responses={201: OrderOutputSerializer})
@@ -363,7 +369,7 @@ class OrderDetailView(RetrieveUpdateAPIView):
             partial=partial,
         )
         serializer.is_valid(raise_exception=True)
-        order = serializer.save()
+        order = serializer.save(user=request.user)
 
         return Response(
             OrderOutputSerializer(order).data,
@@ -408,7 +414,7 @@ class OrderStatusUpdateView(UpdateAPIView):
 
 @extend_schema(responses={200: OrderLogOutputSerializer(many=True)})
 class OrderLogListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperuser]
 
     def get(self, request):
         queryset = OrderLog.objects.select_related("order", "customer", "created_by")
@@ -416,6 +422,9 @@ class OrderLogListView(APIView):
         date_filter = request.query_params.get("date")
         customer_filter = request.query_params.get("customer")
         status_filter = request.query_params.get("status")
+        order_id_filter = request.query_params.get("order_id")
+        last_updated_filter = request.query_params.get("last_updated")
+        event_type_filter = request.query_params.get("event_type")
 
         if date_filter:
             parsed_date = parse_date(date_filter)
@@ -434,8 +443,44 @@ class OrderLogListView(APIView):
                 queryset = queryset.filter(customer__name__icontains=customer_filter)
 
         if status_filter:
+            valid_statuses = {value for value, _ in Order.OrderStatus.choices}
+            if status_filter not in valid_statuses:
+                return Response(
+                    {"status": "Invalid order status."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             queryset = queryset.filter(new_status=status_filter)
 
-        serializer = OrderLogOutputSerializer(queryset, many=True)
+        if event_type_filter:
+            valid_event_types = {value for value, _ in OrderLog.EventType.choices}
+            if event_type_filter not in valid_event_types:
+                return Response(
+                    {"event_type": "Invalid order event type."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(event_type=event_type_filter)
 
-        return Response(serializer.data)
+        if order_id_filter:
+            try:
+                parsed_order_id = UUID(order_id_filter)
+            except (TypeError, ValueError, AttributeError):
+                return Response(
+                    {"order_id": "Use a valid UUID."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(order_id=parsed_order_id)
+
+        if last_updated_filter:
+            parsed_last_updated = parse_date(last_updated_filter)
+            if parsed_last_updated is None:
+                return Response(
+                    {"last_updated": "Use YYYY-MM-DD format."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(updated_at__date=parsed_last_updated)
+
+        paginator = OrderLogPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = OrderLogOutputSerializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)

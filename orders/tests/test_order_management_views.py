@@ -1,19 +1,24 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from menu.models import Branch, Category, Ingredient, MenuItem, Unit
-from orders.models import Customer, DeliveryCompany, Order, OrderLog
+from orders.models import Customer, DeliveryCompany, Order, OrderItem, OrderLog
 
 
 class OrderManagementViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        self.user = User.objects.create_user(username="cashier", password="test1234")
+        self.user = User.objects.create_user(
+            username="cashier",
+            password="test1234",
+            is_staff=True,
+            is_superuser=True,
+        )
 
         self.client.login(username="cashier", password="test1234")
 
@@ -288,6 +293,16 @@ class OrderManagementViewTests(TestCase):
             price=2,
             unit=unit,
         )
+        OrderItem.objects.create(
+            order=self.order,
+            menu_item=menu_item,
+            menu_item_name_ar=menu_item.name_ar,
+            menu_item_base_price=menu_item.price,
+            quantity=5,
+            total_price=50,
+        )
+        self.order.total_price = 50
+        self.order.save(update_fields=["total_price", "updated_at"])
 
         response = self.client.put(
             f"/api/orders/{self.order.id}/",
@@ -301,7 +316,7 @@ class OrderManagementViewTests(TestCase):
                 "items": [
                     {
                         "menu_item_id": menu_item.id,
-                        "quantity": 2,
+                        "quantity": 3,
                         "note": "No onion",
                         "modifications": [
                             {
@@ -324,13 +339,18 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(self.order.order_type, Order.OrderType.DINE_IN)
         self.assertEqual(self.order.status, Order.OrderStatus.PREPARING)
         self.assertEqual(self.order.note, "Updated items")
-        self.assertEqual(self.order.total_price, 22)
+        self.assertEqual(self.order.total_price, 32)
         self.assertEqual(self.order.items.count(), 1)
 
         order_item = self.order.items.get()
-        self.assertEqual(order_item.quantity, 2)
-        self.assertEqual(order_item.total_price, 22)
+        self.assertEqual(order_item.quantity, 3)
+        self.assertEqual(order_item.total_price, 32)
         self.assertEqual(order_item.modifications.count(), 1)
+
+        log = self.order.logs.get(event_type=OrderLog.EventType.MODIFIED)
+        self.assertEqual(log.created_by, self.user)
+        self.assertEqual(log.changes["before"]["items"][0]["quantity"], 5)
+        self.assertEqual(log.changes["after"]["items"][0]["quantity"], 3)
 
     def test_patch_order_rejects_invalid_branch(self):
         response = self.client.patch(
@@ -365,6 +385,56 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(log.new_status, Order.OrderStatus.PREPARING)
 
         self.assertEqual(log.created_by, self.user)
+
+    @override_settings(ORDER_CANCELLATION_PASSWORD="admin-cancel-secret")
+    def test_cancelling_order_requires_correct_password(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.CANCELLED,
+                "cancellation_password": "wrong-password",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.CREATED)
+        self.assertFalse(
+            self.order.logs.filter(
+                event_type=OrderLog.EventType.STATUS_UPDATED
+            ).exists()
+        )
+
+    @override_settings(ORDER_CANCELLATION_PASSWORD="admin-cancel-secret")
+    def test_cancelling_order_with_correct_password_updates_status(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.CANCELLED,
+                "cancellation_password": "admin-cancel-secret",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.CANCELLED)
+
+    @override_settings(ORDER_CANCELLATION_PASSWORD="")
+    def test_cancelling_order_is_rejected_when_password_is_not_configured(self):
+        response = self.client.patch(
+            f"/api/orders/{self.order.id}/status/",
+            {
+                "status": Order.OrderStatus.CANCELLED,
+                "cancellation_password": "any-password",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.OrderStatus.CREATED)
 
     def test_update_order_status_to_picked_up_sets_delivery_company(self):
         delivery_company = DeliveryCompany.objects.create(
@@ -515,7 +585,7 @@ class OrderManagementViewTests(TestCase):
 
         response = self.client.get("/api/orders/logs/")
 
-        data = response.json()
+        data = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
 
@@ -526,6 +596,18 @@ class OrderManagementViewTests(TestCase):
         self.assertEqual(data[0]["customer"]["name"], "Omar")
 
         self.assertEqual(data[0]["created_by_username"], "cashier")
+
+    def test_list_order_logs_rejects_non_superuser_staff(self):
+        staff_user = User.objects.create_user(
+            username="limited-staff",
+            password="test1234",
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+
+        response = self.client.get("/api/orders/logs/")
+
+        self.assertEqual(response.status_code, 403)
 
     def test_filter_order_logs_by_date_customer_and_status(self):
         matching_log = OrderLog.objects.create(
@@ -561,7 +643,7 @@ class OrderManagementViewTests(TestCase):
             f"/api/orders/logs/?date={today}&customer=Omar&status=created"
         )
 
-        data = response.json()
+        data = response.json()["results"]
 
         self.assertEqual(response.status_code, 200)
 
@@ -573,3 +655,72 @@ class OrderManagementViewTests(TestCase):
         response = self.client.get("/api/orders/logs/?date=not-a-date")
 
         self.assertEqual(response.status_code, 400)
+
+    def test_filter_order_logs_by_order_id_and_last_updated(self):
+        matching_log = OrderLog.objects.create(
+            order=self.order,
+            customer=self.customer,
+            event_type=OrderLog.EventType.MODIFIED,
+            new_status=self.order.status,
+            created_by=self.user,
+        )
+
+        response = self.client.get(
+            "/api/orders/logs/",
+            {
+                "order_id": str(self.order.id),
+                "last_updated": timezone.localdate().isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["id"] for row in response.json()["results"]],
+            [matching_log.id],
+        )
+
+    def test_filter_order_logs_rejects_invalid_order_id(self):
+        response = self.client.get("/api/orders/logs/?order_id=not-a-uuid")
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_filter_order_logs_by_event_type(self):
+        OrderLog.objects.create(
+            order=self.order,
+            customer=self.customer,
+            event_type=OrderLog.EventType.CREATED,
+            new_status=self.order.status,
+            created_by=self.user,
+        )
+        modified_log = OrderLog.objects.create(
+            order=self.order,
+            customer=self.customer,
+            event_type=OrderLog.EventType.MODIFIED,
+            new_status=self.order.status,
+            created_by=self.user,
+        )
+
+        response = self.client.get(
+            "/api/orders/logs/?event_type=modified&page_size=25"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], modified_log.id)
+
+    def test_order_logs_are_paginated(self):
+        for _ in range(3):
+            OrderLog.objects.create(
+                order=self.order,
+                customer=self.customer,
+                event_type=OrderLog.EventType.MODIFIED,
+                new_status=self.order.status,
+                created_by=self.user,
+            )
+
+        response = self.client.get("/api/orders/logs/?page_size=2")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 3)
+        self.assertEqual(len(response.json()["results"]), 2)
+        self.assertIsNotNone(response.json()["next"])

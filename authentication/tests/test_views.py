@@ -39,6 +39,19 @@ class AuthenticationViewTests(TestCase):
         self.assertTrue(response.json()["authenticated"])
 
         self.assertEqual(response.json()["username"], "cashier")
+        self.assertFalse(response.json()["can_view_reports"])
+        self.assertFalse(response.json()["can_view_order_logs"])
+
+    def test_me_allows_superusers_to_view_reports(self):
+        self.user.is_staff = True
+        self.user.is_superuser = True
+        self.user.save(update_fields=["is_staff", "is_superuser"])
+        self.client.login(username="cashier", password="test1234")
+
+        response = self.client.get("/api/auth/me/")
+
+        self.assertTrue(response.json()["can_view_reports"])
+        self.assertTrue(response.json()["can_view_order_logs"])
 
     def test_me_unauthenticated(self):
         response = self.client.get("/api/auth/me/")
