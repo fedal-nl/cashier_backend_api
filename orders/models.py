@@ -1,7 +1,9 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.functional import cached_property
 import uuid
 from typing import TYPE_CHECKING
 
@@ -213,3 +215,59 @@ class OrderItemModification(models.Model):
 
     def __str__(self):
         return f"{self.modification_type.capitalize()} {self.ingredient_name_ar}"
+
+
+class Campaign(models.Model):
+    class Channel(models.TextChoices):
+        TIKTOK = "tiktok", "TikTok"
+        INSTAGRAM = "instagram", "Instagram"
+        ONLINE = "online", "Online"
+
+    campaign_name = models.CharField(max_length=255, db_index=True)
+    menu_items = models.ManyToManyField("menu.MenuItem", related_name="campaigns")
+    start_date = models.DateField(db_index=True)
+    end_date = models.DateField(db_index=True)
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    amount_spent = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
+
+    class Meta:
+        ordering = ["-start_date", "-id"]
+
+    def __str__(self):
+        return self.campaign_name
+
+    def clean(self):
+        super().clean()
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError(
+                {"end_date": "End date must be on or after start date."}
+            )
+
+    @cached_property
+    def current_revenue(self):
+        return OrderItem.objects.filter(
+            menu_item__in=self.menu_items.all(),
+            order__created_at__date__gte=self.start_date,
+            order__created_at__date__lte=self.end_date,
+        ).exclude(order__status=Order.OrderStatus.CANCELLED).aggregate(
+            total=models.Sum("total_price")
+        )["total"] or Decimal("0.00")
+
+    @cached_property
+    def total_orders(self):
+        return (
+            Order.objects.filter(
+                items__menu_item__in=self.menu_items.all(),
+                created_at__date__gte=self.start_date,
+                created_at__date__lte=self.end_date,
+            )
+            .exclude(status=Order.OrderStatus.CANCELLED)
+            .distinct()
+            .count()
+        )
+
+    @cached_property
+    def profit(self):
+        return self.current_revenue - self.amount_spent

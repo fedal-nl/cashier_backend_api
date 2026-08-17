@@ -18,6 +18,7 @@ class MenuItemAdminForm(forms.ModelForm):
 
 class MenuItemAdmin(admin.ModelAdmin):
     form = MenuItemAdminForm
+    list_filter = ("branches", "category")
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

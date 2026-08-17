@@ -1,10 +1,52 @@
+from django import forms
 from django.contrib import admin
-from .models import Customer, DeliveryCompany, Order, OrderItem, OrderLog
+from django.contrib.admin.widgets import FilteredSelectMultiple
+
+from menu.models import MenuItem
+
+from .models import Campaign, Customer, DeliveryCompany, Order, OrderItem, OrderLog
 
 # Register your models here.
 admin.site.register(Customer)
 admin.site.register(DeliveryCompany)
 admin.site.register(OrderItem)
+
+
+class CampaignMenuItemChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, menu_item):
+        branches = ", ".join(branch.name for branch in menu_item.branches.all())
+        branches = branches or "All branches"
+        return f"{menu_item.name_ar} — {menu_item.category.name_ar} — {branches}"
+
+
+class CampaignAdminForm(forms.ModelForm):
+    menu_items = CampaignMenuItemChoiceField(
+        queryset=MenuItem.objects.select_related("category").prefetch_related("branches"),
+        widget=FilteredSelectMultiple("menu items", is_stacked=False),
+    )
+
+    class Meta:
+        model = Campaign
+        fields = "__all__"
+
+
+@admin.register(Campaign)
+class CampaignAdmin(admin.ModelAdmin):
+    form = CampaignAdminForm
+    list_display = (
+        "id",
+        "campaign_name",
+        "channel",
+        "start_date",
+        "end_date",
+        "amount_spent",
+        "current_revenue",
+        "total_orders",
+        "profit",
+    )
+    list_filter = ("channel", "start_date", "end_date")
+    search_fields = ("id", "campaign_name", "menu_items__name_ar")
+    readonly_fields = ("current_revenue", "total_orders", "profit")
 
 
 @admin.register(OrderLog)
