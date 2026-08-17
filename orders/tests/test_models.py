@@ -1,8 +1,12 @@
+from datetime import timedelta
+
 from django.db.models import ProtectedError
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from orders.models import (
+    Campaign,
     Customer,
     DeliveryCompany,
     Order,
@@ -203,6 +207,78 @@ class OrderItemModelTest(TestCase):
     def test_branch_delete_is_protected(self):
         with self.assertRaises(ProtectedError):
             self.branch.delete()
+
+
+class CampaignModelTest(TestCase):
+    def setUp(self):
+        self.branch = Branch.objects.create(name="Main")
+        self.category = Category.objects.create(name_ar="Food")
+        self.menu_item = MenuItem.objects.create(
+            name_ar="Burger", price=10, category=self.category
+        )
+        self.other_item = MenuItem.objects.create(
+            name_ar="Drink", price=5, category=self.category
+        )
+        self.campaign = Campaign.objects.create(
+            campaign_name="TikTok Burger",
+            start_date=timezone.localdate(),
+            end_date=timezone.localdate(),
+            channel=Campaign.Channel.TIKTOK,
+            amount_spent=12,
+        )
+        self.campaign.menu_items.add(self.menu_item)
+
+    def test_metrics_only_include_promoted_items_from_non_cancelled_orders(self):
+        order = Order.objects.create(
+            branch=self.branch,
+            status=Order.OrderStatus.COMPLETED,
+            total_price=25,
+        )
+        OrderItem.objects.create(
+            order=order,
+            menu_item=self.menu_item,
+            menu_item_name_ar="Burger",
+            menu_item_base_price=10,
+            quantity=2,
+            total_price=20,
+        )
+        OrderItem.objects.create(
+            order=order,
+            menu_item=self.other_item,
+            menu_item_name_ar="Drink",
+            menu_item_base_price=5,
+            quantity=1,
+            total_price=5,
+        )
+        cancelled_order = Order.objects.create(
+            branch=self.branch,
+            status=Order.OrderStatus.CANCELLED,
+            total_price=10,
+        )
+        OrderItem.objects.create(
+            order=cancelled_order,
+            menu_item=self.menu_item,
+            menu_item_name_ar="Burger",
+            menu_item_base_price=10,
+            quantity=1,
+            total_price=10,
+        )
+
+        self.assertEqual(self.campaign.current_revenue, 20)
+        self.assertEqual(self.campaign.total_orders, 1)
+        self.assertEqual(self.campaign.profit, 8)
+
+    def test_end_date_cannot_precede_start_date(self):
+        campaign = Campaign(
+            campaign_name="Invalid",
+            start_date=timezone.localdate(),
+            end_date=timezone.localdate() - timedelta(days=1),
+            channel=Campaign.Channel.ONLINE,
+            amount_spent=10,
+        )
+
+        with self.assertRaises(ValidationError):
+            campaign.full_clean()
 
 
 class OrderItemModificationTest(TestCase):
